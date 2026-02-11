@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Track MegaETH deployment announcements
- * Usage: node deployment-tracker.js
+ * Backfill deployment history
+ * Usage: node backfill-deployments.js [--max-tweets=100]
  */
 
 const path = require('path');
@@ -56,17 +56,48 @@ async function getUserId(username) {
   }
 }
 
-async function getRecentTweets(username, count = 20) {
+async function getAllDeploymentTweets(username, maxTweets = 100) {
   try {
     const userId = await getUserId(username);
     if (!userId) return [];
 
-    const tweets = await client.v2.userTimeline(userId, {
-      max_results: count,
-      'tweet.fields': ['created_at', 'public_metrics', 'conversation_id'],
-    });
+    log(`Fetching up to ${maxTweets} tweets from @${username}...`);
+    
+    const allTweets = [];
+    let paginationToken = undefined;
+    
+    while (allTweets.length < maxTweets) {
+      const params = {
+        max_results: Math.min(100, maxTweets - allTweets.length),
+        'tweet.fields': ['created_at', 'public_metrics', 'conversation_id'],
+      };
+      
+      if (paginationToken) {
+        params.pagination_token = paginationToken;
+      }
+      
+      const response = await client.v2.userTimeline(userId, params);
+      
+      if (!response.data.data || response.data.data.length === 0) {
+        break;
+      }
+      
+      allTweets.push(...response.data.data);
+      log(`Fetched ${allTweets.length} tweets so far...`);
+      
+      // Check if there's more data
+      if (!response.data.meta.next_token) {
+        break;
+      }
+      
+      paginationToken = response.data.meta.next_token;
+      
+      // Rate limit protection: small delay between requests
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
 
-    return tweets.data.data || [];
+    log(`Total tweets fetched: ${allTweets.length}`);
+    return allTweets;
   } catch (error) {
     log(`Failed to fetch tweets from @${username}: ${error.message}`, 'ERROR');
     return [];
@@ -111,13 +142,14 @@ function extractDeployment(text) {
   return null;
 }
 
-async function sendTelegramAlert(deployment) {
+async function sendTelegramAlert(deployment, isBatch = false) {
   if (!bot || !TELEGRAM_CHANNEL_ID) {
     log('Telegram bot or channel ID not configured, skipping alert.', 'WARN');
     return;
   }
 
-  const message = `🚀 *New MegaETH Deployment Detected!*\n\n` +
+  const batchPrefix = isBatch ? '📦 **BACKFILL** - ' : '';
+  const message = `${batchPrefix}🚀 *New MegaETH Deployment Detected!*\n\n` +
     `📦 *Project:* @${deployment.project || 'unknown'}\n` +
     `📅 *Time:* ${deployment.createdAt}\n\n` +
     `🔗 [View Tweet](${deployment.url})\n\n` +
@@ -126,15 +158,18 @@ async function sendTelegramAlert(deployment) {
   try {
     await bot.sendMessage(TELEGRAM_CHANNEL_ID, message, { parse_mode: 'Markdown' });
     log(`Telegram alert sent for project: @${deployment.project}`);
+    
+    // Small delay to avoid telegram rate limits
+    await new Promise(resolve => setTimeout(resolve, 500));
   } catch (error) {
     log(`Failed to send Telegram alert: ${error.message}`, 'ERROR');
   }
 }
 
-async function checkDeployments() {
-  log('Checking for new deployments...');
+async function backfillDeployments(maxTweets = 100) {
+  log(`Starting backfill for last ${maxTweets} tweets...`);
   
-  const tweets = await getRecentTweets('megaeth', 20);
+  const tweets = await getAllDeploymentTweets('megaeth', maxTweets);
   const tracked = loadTracked();
   const newDeployments = [];
 
@@ -147,7 +182,7 @@ async function checkDeployments() {
       
       if (!isTracked) {
         const project = extractDeployment(tweet.text);
-        log(`New deployment detected: @${project || 'unknown'}`);
+        log(`New deployment detected: @${project || 'unknown'} (${tweet.created_at})`);
         
         const deployment = {
           id: tweetId,
@@ -160,17 +195,18 @@ async function checkDeployments() {
         newDeployments.push(deployment);
         tracked.deployments.push(deployment);
         
-        await sendTelegramAlert(deployment);
+        await sendTelegramAlert(deployment, true);
       }
     }
   }
 
   if (newDeployments.length > 0) {
     saveTracked(tracked);
-    log(`Found ${newDeployments.length} new deployment(s)`);
+    log(`✅ BACKFILL COMPLETE: Found ${newDeployments.length} new deployment(s)`);
+    log(`Total deployments in database: ${tracked.deployments.length}`);
     return newDeployments;
   } else {
-    log('No new deployments since last check.');
+    log('No new deployments found in backfill.');
     return [];
   }
 }
@@ -180,7 +216,12 @@ async function main() {
       log('Twitter API credentials missing. Please set environment variables.', 'FATAL');
       process.exit(1);
   }
-  await checkDeployments();
+  
+  // Parse max tweets from command line
+  const maxTweetsArg = process.argv.find(arg => arg.startsWith('--max-tweets='));
+  const maxTweets = maxTweetsArg ? parseInt(maxTweetsArg.split('=')[1]) : 100;
+  
+  await backfillDeployments(maxTweets);
 }
 
 main().catch(err => {

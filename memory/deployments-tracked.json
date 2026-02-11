@@ -1,18 +1,256 @@
 {
   "deployments": [
-    "2020724385615839304",
-    "2020624461465289200",
-    "2020611860362649615",
-    "2020590496020885885",
-    "2020564179174969677",
-    "2020402072873791493",
-    "2020246438631076264",
-    "2020222653722964327",
-    "2020183022579204401",
-    "2020173133261730163",
-    "2019819391660294547",
-    "2020967971599110585",
-    "2020887532385566826",
-    "2020879604874158107"
+    {
+      "id": "2020967971599110585",
+      "project": "AiCrypts",
+      "url": "https://x.com/megaeth/status/2020967971599110585",
+      "text": "Deployment detected for @AiCrypts\n\nPrompt-based competitions are live one MegaETH. https://t.co/SCtKzKK3Nu https://t.co/ihRb8CEfFP",
+      "createdAt": "2026-02-09T21:08:06.000Z"
+    },
+    {
+      "id": "2020887532385566826",
+      "project": "bananagun",
+      "url": "https://x.com/megaeth/status/2020887532385566826",
+      "text": "Deployment detected for @bananagun\n\nThe bot built by onchain traders is live on MegaETH. https://t.co/fCL2dalYbk https://t.co/4k8rg5hZz8",
+      "createdAt": "2026-02-09T15:48:28.000Z"
+    },
+    {
+      "id": "2020879604874158107",
+      "project": "OffshoreOnMega",
+      "url": "https://x.com/megaeth/status/2020879604874158107",
+      "text": "Deployment detected for @OffshoreOnMega https://t.co/3wghuK7W6w https://t.co/dl6yLK11Yj",
+      "createdAt": "2026-02-09T15:16:58.000Z"
+    },
+    {
+      "id": "2020724385615839304",
+      "project": "realtime_defi",
+      "url": "https://x.com/megaeth/status/2020724385615839304",
+      "text": "Deployment detected for @realtime_defi\n\nYour DeFi superapp, delivering vertically integrated services to cover the complete lifecycle of a token:\n\n→ Launchpad\n→ Constant Product CLMM\n→ Spot CLOB\n→ Perpetuals\n→ Aggregator\n\nCapital efficiency starts and stops in one app. https://t.co/exDmi5WvVt",
+      "createdAt": "2026-02-09T05:00:11.000Z"
+    },
+    {
+      "id": "2020624461465289200",
+      "project": "clutchpredict",
+      "url": "https://x.com/megaeth/status/2020624461465289200",
+      "text": "Deployment detected for @clutchpredict\n\nClutch brings prediction markets to livestreaming, allowing users to bet on in-game action in real-time.\n\nSoon on MegaETH. https://t.co/bsMDCyo9Yv https://t.co/JWQGUHyTlO",
+      "createdAt": "2026-02-08T22:23:07.000Z"
+    },
+    {
+      "id": "2020611860362649615",
+      "project": "mrdn_finance",
+      "url": "https://x.com/megaeth/status/2020611860362649615",
+      "text": "Deployment detected for @mrdn_finance\n\nMeridian brings x402 to MegaETH, enabling gasless $USDM transfers for the agentic economy.\n\nAgents will be first class citizens of the first real-time blockchain.\n\nDay 1. https://t.co/i0bhauZToA",
+      "createdAt": "2026-02-08T21:33:03.000Z"
+    },
+    {
+      "id": "2020590496020885885",
+      "project": "fasterdotfun",
+      "url": "https://x.com/megaeth/status/2020590496020885885",
+      "text": "Deployment detected for @fasterdotfun\n\nThe memecoin launchpad for die-hard trenchers.\n\nFully customizable for token creators\n→ Buyback fee percentage\n→ Creator fee percentage\n→ Airdrop redistribution\n→ EIP6909 for cheaper deployments\n\nDay 1. https://t.co/4I0IalDEnY",
+      "createdAt": "2026-02-08T20:08:09.000Z"
+    },
+    {
+      "id": "2020564179174969677",
+      "project": "PriorityTrade_",
+      "url": "https://x.com/megaeth/status/2020564179174969677",
+      "text": "Deployment detected by @PriorityTrade_\n\nThe MegaETH native trading bot, built for speed is ready for mainnet.\n\nLive now. https://t.co/G4ZU0FfUd9",
+      "createdAt": "2026-02-08T18:23:35.000Z"
+    },
+    {
+      "id": "2020402072873791493",
+      "project": "BasedTradingBot",
+      "url": "https://x.com/megaeth/status/2020402072873791493",
+      "text": "Deployment detected for @BasedTradingBot\n\nThe #1 degen trading bot and terminal.\n\nDay 1. https://t.co/7mBB1IGEyT",
+      "createdAt": "2026-02-08T07:39:26.000Z"
+    },
+    {
+      "id": "2020246438631076264",
+      "project": "GainsNetwork_io",
+      "url": "https://x.com/megaeth/status/2020246438631076264",
+      "text": "Deployment detected for @GainsNetwork_io\n\nYour USDm-fueled perps platform.\n\ngTrade brings fully onchain perps across crypto and RWA markets, offering a CEX-like trading experience on MegaETH. https://t.co/H6uILjeTNx",
+      "createdAt": "2026-02-07T21:20:59.000Z"
+    },
+    {
+      "id": "2020222653722964327",
+      "project": "mtrkr_xyz",
+      "url": "https://x.com/megaeth/status/2020222653722964327",
+      "text": "Deployment detected for @mtrkr_xyz\n\nMTRKR is the natively-built, all-in-one wallet tracker built for MegaETH.\n\nTrack your onchain activity, DeFi positions, NFTs, and gaming activity and follow your position in the MegaETH Bonus Campaign leaderboard (coming soon). https://t.co/kmS9kXnSUm",
+      "createdAt": "2026-02-07T19:46:29.000Z"
+    },
+    {
+      "id": "2020183022579204401",
+      "project": "premarket_xyz",
+      "url": "https://x.com/megaeth/status/2020183022579204401",
+      "text": "Deployment detected for @premarket_xyz\n\nYour place for TGEs, IPOs and everything else on MegaETH. https://t.co/k0akc80aUk https://t.co/zGgtHkMlSo",
+      "createdAt": "2026-02-07T17:09:00.000Z"
+    },
+    {
+      "id": "2020173133261730163",
+      "project": "SupernovaLabs_",
+      "url": "https://x.com/megaeth/status/2020173133261730163",
+      "text": "Deployment detected for @SupernovaLabs_\n\nYour MegaETH native rate exchange.\n\nSupernova lets users trade and hedge interest rates, crypto cross-rates, and FX onchain in real-time. https://t.co/BvXNAIHafr https://t.co/OWKkleUI06",
+      "createdAt": "2026-02-07T16:29:42.000Z"
+    },
+    {
+      "id": "2019819391660294547",
+      "project": "chainlink",
+      "url": "https://x.com/megaeth/status/2019819391660294547",
+      "text": "Deployment detected for @chainlink\n\nThe industry-standard oracle is live on mainnet.\n\nMegaETH has also joined Chainlink Scale, now leveraging even more of the platform and bringing institutional-grade data to real-time apps.\n\nLive Day 1:\n→ CCIP\n→ Data Streams\n→ Data Feeds https://t.co/7bGYsH5QqB",
+      "createdAt": "2026-02-06T17:04:04.000Z"
+    },
+    {
+      "id": "2019760332642947411",
+      "project": "birdeye_so",
+      "url": "https://x.com/megaeth/status/2019760332642947411",
+      "text": "Deployment detected for @birdeye_so https://t.co/fKvKKweAhP https://t.co/TPR2sPGjU5",
+      "createdAt": "2026-02-06T13:09:23.000Z"
+    },
+    {
+      "id": "2019708160681161034",
+      "project": "infinex",
+      "url": "https://x.com/megaeth/status/2019708160681161034",
+      "text": "Deployment detected for @infinex\n\nThe crypto superapp is bringing its unified portfolios to MegaETH.\n\nGet the Infinex extension for one-click access to ecosystem apps.\n\nDay 1. https://t.co/PPjti8PBZh",
+      "createdAt": "2026-02-06T09:42:04.000Z"
+    },
+    {
+      "id": "2019535222342295845",
+      "project": "avon_xyz",
+      "url": "https://x.com/megaeth/status/2019535222342295845",
+      "text": "Deployment detected for @avon_xyz\n\nAvon is the first real-time credit layer and creators of MegaVault.\n\nMegaVault uses risk-isolated strategies, shared CLOB matching, and transparent rates to turn idle $USDm into $USDmY; its yield-bearing counterpart, https://t.co/JBzLxiERI6",
+      "createdAt": "2026-02-05T22:14:52.000Z"
+    },
+    {
+      "id": "2019505294968299632",
+      "project": "aave",
+      "url": "https://x.com/megaeth/status/2019505294968299632",
+      "text": "Deployment detected for @aave\n\nUsers will be able to earn, borrow, save, and swap on the industries most trusted financial network\n\nDay 1. https://t.co/kPSSR43oWQ",
+      "createdAt": "2026-02-05T20:15:57.000Z"
+    },
+    {
+      "id": "2019420733081092582",
+      "project": "AvailProject",
+      "url": "https://x.com/megaeth/status/2019420733081092582",
+      "text": "Deployment detected for @AvailProject Nexus https://t.co/NPWwhoy7dK https://t.co/4zrUHcNhRw",
+      "createdAt": "2026-02-05T14:39:56.000Z"
+    },
+    {
+      "id": "2019190888073973983",
+      "project": "BungeeExchange",
+      "url": "https://x.com/megaeth/status/2019190888073973983",
+      "text": "Deployment detected for @BungeeExchange\n\nThe liquidity marketplace will give MegaETH users access to instant swaps across 25+ chain.\n\nDay 1. https://t.co/LCZlwHmuF7",
+      "createdAt": "2026-02-04T23:26:37.000Z"
+    },
+    {
+      "id": "2018873188118372393",
+      "project": "warpexchange",
+      "url": "https://x.com/megaeth/status/2018873188118372393",
+      "text": "Deployment detected for @warpexchange\n\nA DEX optimized for real-time swaps and permissionless pools.\n\nThey've also worked to integrate in the early DeFi ecosystem:\n→ Improved routing via @KyberNetwork\n→ Natively embedded $USDM MegaVault via @avon_xyz\n→ Pool migration for https://t.co/f7E4auDzDM",
+      "createdAt": "2026-02-04T02:24:11.000Z"
+    },
+    {
+      "id": "2017249629533020657",
+      "project": "aori_io",
+      "url": "https://x.com/megaeth/status/2017249629533020657",
+      "text": "Deployment detected for @aori_io\n\nThe universal intent protocol for instant, gasless cross-chain swaps.\n\nAori powers both @StargateFinance and @USDT0_to while being a trusted $USDM issuer, providing low-latency, tight quotes for users acquiring MegaETH's native stablecoin.\n\nUsers https://t.co/FRCU9mWAkR",
+      "createdAt": "2026-01-30T14:52:45.000Z"
+    },
+    {
+      "id": "2015497125115916625",
+      "project": "SectorOneDEX",
+      "url": "https://x.com/megaeth/status/2015497125115916625",
+      "text": "Deployment detected for @SectorOneDEX\n\nSectorOne is MegaETH's native DLMM (Dynamic Liquidity Market Maker).\n\nUsers can shape and adapt their liquidity position dynamically as the market moves, giving more control and generating more yield-per-$. https://t.co/3HTjHeDeTk",
+      "createdAt": "2026-01-25T18:48:55.000Z"
+    },
+    {
+      "id": "2014734697281327344",
+      "project": "AveForge",
+      "url": "https://x.com/megaeth/status/2014734697281327344",
+      "text": "Deployment detected for @AveForge\n\nAveForge is an onchain arena game built on MegaETH.\n\nCompetitive play starts shortly after mainnet, with real prize pool tournaments.\n\nA P2P marketplace and an in-game store will power its gameplay, progression, and rewards economy. https://t.co/ngZIwBALsR",
+      "createdAt": "2026-01-23T16:19:18.000Z"
+    },
+    {
+      "id": "2014699686721159639",
+      "project": "PrismFi_",
+      "url": "https://x.com/megaeth/status/2014699686721159639",
+      "text": "Deployment detected for @PrismFi_\n\nPrism is MegaETH’s DeFi superapp. A unified, real-time engine for everything onchain.\n\nYour one-stop-shop for:\n→ Swaps (incl. cross-chain) [powered by @lifiprotocol]\n→ Perps &amp; spot trading [powered by @wcm_in]\n→ Prediction markets [powered by https://t.co/7gFg08aAoI",
+      "createdAt": "2026-01-23T14:00:11.000Z"
+    },
+    {
+      "id": "2014000632815079758",
+      "project": "telisxyz",
+      "url": "https://x.com/megaeth/status/2014000632815079758",
+      "text": "Deployment detected for @telisxyz\n\nWhere users can make money bridging.\n\nTelis manages treasuries across venues, netting settlements instead of moving assets, generating yield on idle capital\n\nWhen a trade is net-positive for the system, users get paid the upside https://t.co/4oR97kgqpm",
+      "createdAt": "2026-01-21T15:42:23.000Z"
+    },
+    {
+      "id": "2013652063943827851",
+      "project": "TopStrikeIO",
+      "url": "https://x.com/megaeth/status/2013652063943827851",
+      "text": "Deployment detected for @TopStrikeIO\n\nTopStrike is real-time fantasy football on MegaETH, offering one-tap trades and live-match pricing on players.\n\nGoals, Injuries, Transfer Rumors, VAR drama. Every moment reprices players in real-time. DeFi meets the beautiful game. https://t.co/bZHCFTBmlP",
+      "createdAt": "2026-01-20T16:37:18.000Z"
+    },
+    {
+      "id": "2013612231364354076",
+      "project": "hitdotone",
+      "url": "https://x.com/megaeth/status/2013612231364354076",
+      "text": "Deployment detected for @hitdotone\n\nHit One gamifies access to extreme leverage and puts it in your pocket.\n\nThis is Arcade Finance.\n\nhttps://t.co/W4Li6eNvfy",
+      "createdAt": "2026-01-20T13:59:01.000Z"
+    },
+    {
+      "id": "2012157118506504577",
+      "project": "thewarren_app",
+      "url": "https://x.com/megaeth/status/2012157118506504577",
+      "text": "Deployment detected for @thewarren_app\n\nThe Warren is a fully-onchain web hosting platform built by @planetai, giving them permanence and censorship-resistance.\n\nUsers upload data onchain, dispersing it into chunks and reconstructing it in real-time when accessed. https://t.co/L9z8vMPIox",
+      "createdAt": "2026-01-16T13:36:55.000Z"
+    },
+    {
+      "id": "2011843322445512849",
+      "project": "smasherdotfun",
+      "url": "https://x.com/megaeth/status/2011843322445512849",
+      "text": "Deployment detected for @smasherdotfun\n\nSmash your way to 100x.\n\nIt's not the size of the hammer that matters, it's how you use it. https://t.co/ereOVxfevt",
+      "createdAt": "2026-01-15T16:50:00.000Z"
+    },
+    {
+      "id": "2011109824050930034",
+      "project": "LidoFinance",
+      "url": "https://x.com/megaeth/status/2011109824050930034",
+      "text": "Deployment detected for @LidoFinance\n\nLido's wstETH is now live on The Frontier, opening Mega's DeFi landscape to industry-leading low-risk yield and paving the way to direct $ETH staking.\n\nMega the ETH. https://t.co/Vwm6x4pnEO",
+      "createdAt": "2026-01-13T16:15:21.000Z"
+    },
+    {
+      "id": "2010731266665243096",
+      "project": "wcm_inc",
+      "url": "https://x.com/megaeth/status/2010731266665243096",
+      "text": "Deployment detected for @wcm_inc\n\nWorld Markets unifies 3 CLOBs (perps, spot and lending) under ATLAS—their proprietary risk engine—creating an exchange with higher leverage, safer liquidations and user access to the leveraged basis trade.\n\nAll onchain. Better than CEX. https://t.co/K7JKbCj56I",
+      "createdAt": "2026-01-12T15:11:06.000Z"
+    },
+    {
+      "id": "2009272102168531368",
+      "project": "kumbaya_xyz",
+      "url": "https://x.com/megaeth/status/2009272102168531368",
+      "text": "Deployment detected for @kumbaya_xyz\n\nKumbaya is Your First Click. As @megamafia's DEX, it is the primary hub for $USDM, $MEGA, other eco tokens, and native launches that leverage its culture-value flywheel.\n\nUsers can trade with deep liquidity and deploy unique cult assets. https://t.co/T757jRAMIJ",
+      "createdAt": "2026-01-08T14:32:54.000Z"
+    },
+    {
+      "id": "2008900786433176048",
+      "project": "redstone_defi",
+      "url": "https://x.com/megaeth/status/2008900786433176048",
+      "text": "Deployment detected @redstone_defi\n\nRedStone's Bolt oracle is live for apps on MegaETH Frontier, providing push-based pricing for the industry's largest assets.\n\nThe flow of Bolt-driven transactions alone pushes MegaETH to a top throughput chain in the Ethereum ecosystem. https://t.co/Uh4JIBwUaU",
+      "createdAt": "2026-01-07T13:57:25.000Z"
+    },
+    {
+      "id": "2008570255803900214",
+      "project": "stompdotgg",
+      "url": "https://x.com/megaeth/status/2008570255803900214",
+      "text": "Deployment detected for @stompdotgg\n\nStomp is a fully onchain PVP game where you battle and collect monsters.\n\nSuper Techy Onchain Monster Pvp. Now on MegaETH Frontier. https://t.co/9D3VwCURzO",
+      "createdAt": "2026-01-06T16:04:01.000Z"
+    },
+    {
+      "id": "2008177139263348877",
+      "project": "capmoney_",
+      "url": "https://x.com/megaeth/status/2008177139263348877",
+      "text": "Deployment detected for @capmoney_\n\nCap is the creator of cUSD—the first Type III stablecoin with over $350M in circulating supply—and an original @megamafia member.\n\nUsers can mint cUSD on Ethereum today and will be able to plug in to DeFi on MegaETH day 1 of open mainnet. https://t.co/sABTAeB6kW",
+      "createdAt": "2026-01-05T14:01:54.000Z"
+    }
   ]
 }

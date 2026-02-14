@@ -18,6 +18,12 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Database
+data/
+*.db
+*.db-wal
+*.db-shm
+
 # Backups
 *.backup
 *.json.backup

@@ -1,15 +1,21 @@
 {
   "name": "megaeth-deployment-tracker",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Real-time deployment intel for MegaETH",
   "main": "scripts/deployment-tracker.js",
   "scripts": {
     "start": "node scripts/deployment-tracker.js",
-    "recap": "node scripts/nightly-recap.js"
+    "recap": "node scripts/nightly-recap.js",
+    "migrate": "node scripts/migrate-json-to-sqlite.js",
+    "enrich": "node scripts/enrichment.js",
+    "milestones": "node scripts/milestone-checker.js",
+    "listen": "node scripts/realtime-listener.js"
   },
   "dependencies": {
+    "better-sqlite3": "^11.7.0",
     "dotenv": "^17.2.4",
     "node-telegram-bot-api": "^0.64.0",
-    "twitter-api-v2": "^1.15.2"
+    "twitter-api-v2": "^1.15.2",
+    "ws": "^8.18.0"
   }
 }

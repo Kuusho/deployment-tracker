@@ -10,6 +10,8 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const { TwitterApi } = require('twitter-api-v2');
 const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs');
+const db = require('../lib/db');
+const ds = require('../lib/data-sources');
 
 // Environment variables
 const TWITTER_API_KEY = process.env.TWITTER_API_KEY;
@@ -159,7 +161,26 @@ async function checkDeployments() {
         
         newDeployments.push(deployment);
         tracked.deployments.push(deployment);
-        
+
+        // Write to SQLite
+        try {
+          db.insertDeployment({
+            id: tweetId,
+            project,
+            url: deployment.url,
+            tweet_text: tweet.text,
+            created_at: tweet.created_at,
+          });
+          log(`Saved to SQLite: @${project}`);
+
+          // Attempt contract address resolution for new deployment
+          resolveAddress({ id: tweetId, project }).catch(err =>
+            log(`Address resolution deferred for @${project}: ${err.message}`, 'WARN')
+          );
+        } catch (dbErr) {
+          log(`SQLite write failed for @${project}: ${dbErr.message}`, 'ERROR');
+        }
+
         await sendTelegramAlert(deployment);
       }
     }
@@ -175,16 +196,30 @@ async function checkDeployments() {
   }
 }
 
+async function resolveAddress(project) {
+  try {
+    const result = await ds.resolveContractAddress(project);
+    if (result && result.address) {
+      db.updateDeployment(project.id, { contract_address: result.address });
+      log(`Resolved @${project.project} → ${result.address} (${result.method})`);
+    }
+  } catch (err) {
+    log(`Address resolution failed for @${project.project}: ${err.message}`, 'WARN');
+  }
+}
+
 async function main() {
   if (!TWITTER_API_KEY || !TWITTER_API_SECRET || !TWITTER_ACCESS_TOKEN || !TWITTER_ACCESS_SECRET) {
       log('Twitter API credentials missing. Please set environment variables.', 'FATAL');
       process.exit(1);
   }
   await checkDeployments();
+  db.close();
 }
 
 main().catch(err => {
   log(`Fatal error: ${err.message}`, 'FATAL');
   if (err.stack) log(err.stack, 'FATAL');
+  db.close();
   process.exit(1);
 });

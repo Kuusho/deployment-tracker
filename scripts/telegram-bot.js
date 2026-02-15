@@ -11,6 +11,7 @@
  *   /warnings - Projects flagged WARNING or RISK
  *   /project  - Deep dive on specific project (/project kumbaya)
  *   /intel    - Latest enrichment run summary
+ *   /brief    - AI-generated alpha brief (/brief or /brief [project])
  *   /help     - Command list
  * 
  * Premium (via x402 — coming soon):
@@ -23,6 +24,7 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const TelegramBot = require('node-telegram-bot-api');
 const db = require('../lib/db');
+const narrator = require('../lib/narrator');
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID;
@@ -128,6 +130,7 @@ the data powering @korewapandesu's posts lives here.
 /warnings — risk alerts
 /alpha — alpha signals
 /intel — latest enrichment summary
+/brief — AI alpha brief (ecosystem or project)
 /help — all commands
 
 bunny speed gud. 🐰`;
@@ -146,6 +149,9 @@ async function cmdHelp(msg) {
 /alpha — alpha-tier signals
 /intel — enrichment run summary
 /project [name] — deep dive
+
+*AI:*
+/brief — alpha brief (or /brief [project])
 
 *Info:*
 /start — intro
@@ -391,6 +397,41 @@ async function cmdProject(msg, args) {
   await bot.sendMessage(msg.chat.id, text, { parse_mode: 'Markdown' });
 }
 
+async function cmdBrief(msg, args) {
+  const chatId = msg.chat.id;
+
+  // Show typing indicator while AI generates
+  await bot.sendChatAction(chatId, 'typing');
+
+  try {
+    let text;
+
+    if (args && args.length > 0) {
+      // Project-specific brief
+      const query = args.join(' ');
+      const result = await narrator.generateProjectBrief(query);
+      if (!result) {
+        await bot.sendMessage(chatId, `❌ project not found: \`${query}\`\n\nTry /top to see tracked projects`, { parse_mode: 'Markdown' });
+        return;
+      }
+      text = result;
+    } else {
+      // Full ecosystem brief
+      text = await narrator.generateEcosystemBrief();
+    }
+
+    await bot.sendMessage(chatId, text, { parse_mode: 'Markdown' });
+  } catch (e) {
+    log(`brief error: ${e.message}`);
+
+    if (e.message.includes('API key') || e.message.includes('authentication')) {
+      await bot.sendMessage(chatId, '⚠️ narrator offline — API key not configured');
+    } else {
+      await bot.sendMessage(chatId, '⚠️ brief generation failed — try again in a moment');
+    }
+  }
+}
+
 // ─── Command Registry ────────────────────────────────────────────────────────
 
 bot.onText(/\/start/, (msg) => cmdStart(msg).catch(e => log(`start error: ${e.message}`)));
@@ -405,6 +446,10 @@ bot.onText(/\/project(?:\s+(.+))?/, (msg, match) => {
   const args = match[1] ? match[1].trim().split(/\s+/) : [];
   cmdProject(msg, args).catch(e => log(`project error: ${e.message}`));
 });
+bot.onText(/\/brief(?:\s+(.+))?/, (msg, match) => {
+  const args = match[1] ? match[1].trim().split(/\s+/) : [];
+  cmdBrief(msg, args).catch(e => log(`brief error: ${e.message}`));
+});
 
 // Register commands with Telegram BotFather API
 async function registerCommands() {
@@ -418,6 +463,7 @@ async function registerCommands() {
       { command: 'alpha', description: 'Latest alpha signals' },
       { command: 'intel', description: 'Enrichment run summary' },
       { command: 'project', description: 'Deep dive on a project (/project kumbaya)' },
+      { command: 'brief', description: 'AI alpha brief (/brief or /brief sectorone)' },
       { command: 'help', description: 'All commands' },
     ]);
     log('✅ Commands registered with Telegram');

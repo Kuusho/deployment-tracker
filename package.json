@@ -17,6 +17,7 @@
     "check-agent": "node scripts/erc8004-register.js --info"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.74.0",
     "@x402/core": "^2.3.1",
     "@x402/evm": "^2.3.1",
     "@x402/express": "^2.3.0",

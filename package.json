@@ -9,11 +9,22 @@
     "migrate": "node scripts/migrate-json-to-sqlite.js",
     "enrich": "node scripts/enrichment.js",
     "milestones": "node scripts/milestone-checker.js",
-    "listen": "node scripts/realtime-listener.js"
+    "listen": "node scripts/realtime-listener.js",
+    "bot": "node scripts/telegram-bot.js",
+    "api": "node scripts/api-server.js",
+    "wallet": "node scripts/generate-wallet.js",
+    "register": "node scripts/erc8004-register.js --register",
+    "check-agent": "node scripts/erc8004-register.js --info"
   },
   "dependencies": {
+    "@x402/core": "^2.3.1",
+    "@x402/evm": "^2.3.1",
+    "@x402/express": "^2.3.0",
     "better-sqlite3": "^11.7.0",
+    "cors": "^2.8.6",
     "dotenv": "^17.2.4",
+    "ethers": "^6.16.0",
+    "express": "^5.2.1",
     "node-telegram-bot-api": "^0.64.0",
     "twitter-api-v2": "^1.15.2",
     "ws": "^8.18.0"

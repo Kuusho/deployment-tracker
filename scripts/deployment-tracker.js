@@ -162,16 +162,16 @@ async function checkDeployments() {
         newDeployments.push(deployment);
         tracked.deployments.push(deployment);
 
-        // Write to SQLite
+        // Write to DB
         try {
-          db.insertDeployment({
+          await db.insertDeployment({
             id: tweetId,
             project,
             url: deployment.url,
             tweet_text: tweet.text,
             created_at: tweet.created_at,
           });
-          log(`Saved to SQLite: @${project}`);
+          log(`Saved to DB: @${project}`);
 
           // Attempt contract address resolution for new deployment
           resolveAddress({ id: tweetId, project }).catch(err =>
@@ -200,7 +200,7 @@ async function resolveAddress(project) {
   try {
     const result = await ds.resolveContractAddress(project);
     if (result && result.address) {
-      db.updateDeployment(project.id, { contract_address: result.address });
+      await db.updateDeployment(project.id, { contract_address: result.address });
       log(`Resolved @${project.project} → ${result.address} (${result.method})`);
     }
   } catch (err) {
@@ -214,12 +214,12 @@ async function main() {
       process.exit(1);
   }
   await checkDeployments();
-  db.close();
+  await db.close();
 }
 
-main().catch(err => {
+main().catch(async err => {
   log(`Fatal error: ${err.message}`, 'FATAL');
   if (err.stack) log(err.stack, 'FATAL');
-  db.close();
+  await db.close();
   process.exit(1);
 });

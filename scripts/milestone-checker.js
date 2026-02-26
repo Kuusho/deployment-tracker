@@ -75,12 +75,12 @@ async function sendMilestoneAlert(milestone) {
 async function main() {
   log('=== Milestone checker starting ===');
 
-  const milestones = db.getUnalertedMilestones();
+  const milestones = await db.getUnalertedMilestones();
   log(`Found ${milestones.length} unalerted milestones`);
 
   if (milestones.length === 0) {
     log('Nothing to alert');
-    db.close();
+    await db.close();
     return;
   }
 
@@ -88,7 +88,7 @@ async function main() {
   for (const milestone of milestones) {
     const success = await sendMilestoneAlert(milestone);
     if (success) {
-      db.markMilestoneAlerted(milestone.id);
+      await db.markMilestoneAlerted(milestone.id);
       sent++;
     }
     // Brief pause between messages to avoid Telegram rate limits
@@ -96,11 +96,11 @@ async function main() {
   }
 
   log(`=== Milestone checker complete: ${sent}/${milestones.length} alerts sent ===`);
-  db.close();
+  await db.close();
 }
 
-main().catch(err => {
+main().catch(async err => {
   log(`Fatal milestone error: ${err.message}`, 'FATAL');
-  db.close();
+  await db.close();
   process.exit(1);
 });

@@ -43,9 +43,9 @@ async function enrichEcosystem() {
     log(`  Blockscout stats fetch failed: ${err.message}`, 'WARN');
   }
 
-  const deploymentCount = db.getDeploymentCount();
+  const deploymentCount = await db.getDeploymentCount();
 
-  db.insertEcosystemMetrics({
+  await db.insertEcosystemMetrics({
     total_tvl: totalTvl,
     total_addresses: stats ? parseInt(stats.total_addresses) || null : null,
     total_txs: stats ? parseInt(stats.total_transactions) || null : null,
@@ -58,15 +58,15 @@ async function enrichEcosystem() {
   log(`  Ecosystem snapshot saved (${deploymentCount} deployments)`);
 
   // Check ecosystem milestones
-  checkEcosystemMilestones(totalTvl, stats, deploymentCount);
+  await checkEcosystemMilestones(totalTvl, stats, deploymentCount);
 }
 
-function checkEcosystemMilestones(tvl, stats, deploymentCount) {
+async function checkEcosystemMilestones(tvl, stats, deploymentCount) {
   // TVL milestones
   if (tvl) {
     const crossed = scoring.getCrossedThresholds(tvl, scoring.ECOSYSTEM_TVL_THRESHOLDS);
     for (const threshold of crossed) {
-      db.insertMilestone({
+      await db.insertMilestone({
         type: 'ecosystem', subject: null, metric: 'tvl',
         threshold, actual_value: tvl,
       });
@@ -78,7 +78,7 @@ function checkEcosystemMilestones(tvl, stats, deploymentCount) {
     const txs = parseInt(stats.total_transactions);
     const crossed = scoring.getCrossedThresholds(txs, scoring.ECOSYSTEM_TXS_THRESHOLDS);
     for (const threshold of crossed) {
-      db.insertMilestone({
+      await db.insertMilestone({
         type: 'ecosystem', subject: null, metric: 'total_txs',
         threshold, actual_value: txs,
       });
@@ -90,7 +90,7 @@ function checkEcosystemMilestones(tvl, stats, deploymentCount) {
     const addrs = parseInt(stats.total_addresses);
     const crossed = scoring.getCrossedThresholds(addrs, scoring.ACTIVE_WALLETS_THRESHOLDS);
     for (const threshold of crossed) {
-      db.insertMilestone({
+      await db.insertMilestone({
         type: 'ecosystem', subject: null, metric: 'active_wallets',
         threshold, actual_value: addrs,
       });
@@ -100,21 +100,30 @@ function checkEcosystemMilestones(tvl, stats, deploymentCount) {
   // Deployment count milestones (every 10, starting at 40)
   const depMilestones = scoring.getDeploymentMilestones(deploymentCount);
   for (const threshold of depMilestones) {
-    db.insertMilestone({
+    await db.insertMilestone({
       type: 'ecosystem', subject: null, metric: 'deployment_count',
       threshold, actual_value: deploymentCount,
     });
   }
 }
 
+// --- MegaMafia Flag Sync ---
+
+async function syncMegaMafiaFlags() {
+  const handles = [...scoring.MEGAMAFIA_PROJECTS];
+  await db.bulkSetMegamafia(handles);
+  const flagged = await db.getMegaMafiaCount();
+  log(`  MegaMafia flags synced: ${flagged} projects`);
+}
+
 // --- Per-Project Enrichment ---
 
 async function enrichProjects() {
-  const projects = db.getDeploymentsWithAddress();
+  const projects = await db.getDeploymentsWithAddress();
   log(`Enriching ${projects.length} projects with contract addresses...`);
 
   // Get ecosystem TVL for scoring
-  const latestEco = db.getLatestEcosystemMetrics();
+  const latestEco = await db.getLatestEcosystemMetrics();
   const ecosystemTvl = latestEco?.total_tvl || null;
 
   // Cache DeFiLlama protocols
@@ -137,11 +146,13 @@ async function enrichProjects() {
 
 async function enrichSingleProject(project, ecosystemTvl, protocols) {
   const addr = project.contract_address;
+  const USDM_ADDRESS = '0xFAfDdbb3FC7688494971a79cc65DCa3EF82079E7'; // $USDM token
   let txCount = null;
   let balanceEth = null;
   let balanceWei = null;
   let isVerified = null;
   let tvlUsd = null;
+  let usdmBalance = null;
 
   // Blockscout address info
   try {
@@ -158,24 +169,35 @@ async function enrichSingleProject(project, ecosystemTvl, protocols) {
   // DeFiLlama TVL
   tvlUsd = ds.getProtocolTvlForProject(protocols, project.project, project.defillama_slug);
 
+  // USDM balance held in this contract — key MegaETH KPI signal
+  // vault-mechanic projects (e.g. AVON) may have USDM locked even when not on DeFiLlama
+  try {
+    usdmBalance = await ds.rpcERC20BalanceOf(USDM_ADDRESS, addr, 18);
+    if (usdmBalance === 0) usdmBalance = null; // treat zero as absent for scoring
+  } catch (err) {
+    // silent — most contracts won't hold USDM
+  }
+
   // Contract verification
   try {
     const contract = await ds.blockscoutGetContract(addr);
     isVerified = contract && contract.is_verified ? 1 : 0;
     if (isVerified !== project.contract_verified) {
-      db.updateDeployment(project.id, { contract_verified: isVerified });
+      await db.updateDeployment(project.id, { contract_verified: isVerified });
     }
   } catch (err) {
     // 404 = not verified, not an error
     isVerified = 0;
   }
 
-  // Compute delta from previous snapshot
-  const prev = db.getLatestProjectMetrics(project.id);
+  // Compute deltas from previous snapshot
+  const prev = await db.getLatestProjectMetrics(project.id);
   const txCountDelta = (txCount != null && prev?.tx_count != null) ? txCount - prev.tx_count : null;
+  const balanceEthDelta = (balanceEth != null && prev?.balance_eth != null) ? balanceEth - prev.balance_eth : null;
+  const usdmBalanceDelta = (usdmBalance != null && prev?.usdm_balance != null) ? usdmBalance - prev.usdm_balance : null;
 
   // Compute 7-day average for scoring
-  const history = db.getProjectMetricsHistory(project.id, 14); // ~7 days at 2x/day
+  const history = await db.getProjectMetricsHistory(project.id, 14); // ~7 days at 2x/day
   let txCount7dAvg = null;
   if (history.length >= 2) {
     const deltas = history.filter(h => h.tx_count_delta != null).map(h => h.tx_count_delta);
@@ -192,13 +214,17 @@ async function enrichSingleProject(project, ecosystemTvl, protocols) {
     tx_count_delta: txCountDelta,
     tx_count_7d_avg: txCount7dAvg,
     balance_eth: balanceEth,
-    created_at: project.created_at,
+    balance_eth_delta: balanceEthDelta,
     tx_count: txCount,
-    category: project.category,
     defillama_listed: tvlUsd != null,
+    usdm_balance: usdmBalance,
+    usdm_balance_delta: usdmBalanceDelta,
+    megamafia: project.megamafia === 1,
+    project: project.project,        // allows MEGAMAFIA_PROJECTS set lookup as fallback
+    snapshot_interval_minutes: 30,   // enrichment cron cadence
   });
 
-  db.insertProjectMetrics({
+  await db.insertProjectMetrics({
     deployment_id: project.id,
     tvl_usd: tvlUsd,
     tx_count: txCount,
@@ -208,19 +234,25 @@ async function enrichSingleProject(project, ecosystemTvl, protocols) {
     is_verified: isVerified,
     score,
     classification,
+    usdm_balance: usdmBalance,
+    balance_eth_delta: balanceEthDelta,
+    usdm_balance_delta: usdmBalanceDelta,
   });
 
-  log(`  @${project.project}: score=${score} [${classification}] tvl=${tvlUsd ? '$' + scoring.formatNumber(tvlUsd) : 'N/A'} txs=${txCount || 'N/A'}`);
+  const usdmStr = usdmBalance != null ? ` usdm=${scoring.formatNumber(usdmBalance)}` : '';
+  const feeEthStr = balanceEthDelta != null && balanceEthDelta > 0 ? ` fee_eth=+${balanceEthDelta.toFixed(4)}` : '';
+  const feeUsdmStr = usdmBalanceDelta != null && usdmBalanceDelta > 0 ? ` fee_usdm=+${scoring.formatNumber(usdmBalanceDelta)}` : '';
+  log(`  @${project.project}: score=${score} [${classification}] tvl=${tvlUsd ? '$' + scoring.formatNumber(tvlUsd) : 'N/A'} txs=${txCount || 'N/A'}${usdmStr}${feeEthStr}${feeUsdmStr}`);
 
   // Check project milestones
-  checkProjectMilestones(project, tvlUsd, txCount);
+  await checkProjectMilestones(project, tvlUsd, txCount);
 }
 
-function checkProjectMilestones(project, tvlUsd, txCount) {
+async function checkProjectMilestones(project, tvlUsd, txCount) {
   if (tvlUsd) {
     const crossed = scoring.getCrossedThresholds(tvlUsd, scoring.PROJECT_TVL_THRESHOLDS);
     for (const threshold of crossed) {
-      db.insertMilestone({
+      await db.insertMilestone({
         type: 'project', subject: project.project, metric: 'tvl',
         threshold, actual_value: tvlUsd,
       });
@@ -228,10 +260,106 @@ function checkProjectMilestones(project, tvlUsd, txCount) {
   }
 }
 
+// --- Stablecoin Enrichment ---
+
+const STABLECOINS = [
+  { symbol: 'USDM', address: '0xFAfDdbb3FC7688494971a79cc65DCa3EF82079E7', decimals: 18 },
+  { symbol: 'CUSD', address: '0xcCcc62962d17b8914c62D74FfB843d73B2a3cccC', decimals: 18, stakedAddress: '0x88887bE419578051FF9F4eb6C858A951921D8888' },
+  { symbol: 'stcUSD', address: '0x88887bE419578051FF9F4eb6C858A951921D8888', decimals: 18 },
+];
+
+async function enrichStablecoins() {
+  log('Enriching stablecoin metrics...');
+
+  for (const token of STABLECOINS) {
+    try {
+      let totalSupply = null;
+      let stakedSupply = null;
+      let circulatingSupply = null;
+      let holderCount = null;
+      let transferCount = null;
+
+      // Total supply via RPC eth_call
+      try {
+        totalSupply = await ds.rpcERC20TotalSupply(token.address, token.decimals);
+      } catch (err) {
+        log(`  ${token.symbol} totalSupply RPC failed: ${err.message}`, 'WARN');
+      }
+
+      // For CUSD: get CUSD locked in staking contract via balanceOf(sCUSD_address)
+      if (token.symbol === 'CUSD' && token.stakedAddress) {
+        try {
+          stakedSupply = await ds.rpcERC20BalanceOf(token.address, token.stakedAddress, token.decimals);
+          circulatingSupply = totalSupply != null ? totalSupply - stakedSupply : null;
+        } catch (err) {
+          log(`  CUSD staked balance RPC failed: ${err.message}`, 'WARN');
+          circulatingSupply = totalSupply;
+        }
+      } else {
+        circulatingSupply = totalSupply;
+      }
+
+      // Holder count + transfer count from Blockscout token endpoint
+      try {
+        const tokenInfo = await ds.blockscoutGetTokenInfo(token.address);
+        holderCount = parseInt(tokenInfo.holders ?? tokenInfo.holders_count) || null;
+        transferCount = parseInt(tokenInfo.transfers_count ?? tokenInfo.transfer_count) || null;
+        // Blockscout may return total_supply in raw units — prefer our RPC value
+        if (totalSupply == null && tokenInfo.total_supply) {
+          const rawSupply = BigInt(tokenInfo.total_supply);
+          const divisor = BigInt(10) ** BigInt(token.decimals);
+          totalSupply = Number(rawSupply / divisor) + Number(rawSupply % divisor) / Math.pow(10, token.decimals);
+          circulatingSupply = totalSupply;
+        }
+      } catch (err) {
+        log(`  ${token.symbol} Blockscout token info failed: ${err.message}`, 'WARN');
+      }
+
+      // For USDM: sum usdm_balance already written to project_metrics this run
+      // (enrichProjects runs before enrichStablecoins — no duplicate RPC calls needed)
+      let appsDepositedUsdm = null;
+      if (token.symbol === 'USDM') {
+        appsDepositedUsdm = await db.getLatestUsdmDepositedSum();
+        if (appsDepositedUsdm != null) {
+          log(`  USDM in tracked apps (from project_metrics): ${scoring.formatNumber(appsDepositedUsdm)}`);
+        }
+      }
+
+      // Delta in transfers since last snapshot
+      const prev = await db.getLatestStablecoinMetrics(token.symbol);
+      const transferDelta = (transferCount != null && prev?.transfer_count != null)
+        ? transferCount - prev.transfer_count
+        : null;
+
+      await db.insertStablecoinMetrics({
+        token_symbol: token.symbol,
+        token_address: token.address,
+        total_supply: totalSupply,
+        staked_supply: stakedSupply,
+        circulating_supply: circulatingSupply,
+        holder_count: holderCount,
+        transfer_count: transferCount,
+        transfer_count_delta: transferDelta,
+        apps_deposited_usdm: appsDepositedUsdm,
+      });
+
+      const supplyStr = totalSupply != null ? scoring.formatNumber(totalSupply) : 'N/A';
+      const circStr = (circulatingSupply != null && token.symbol === 'CUSD')
+        ? ` circ=${scoring.formatNumber(circulatingSupply)}`
+        : '';
+      log(`  $${token.symbol}: supply=${supplyStr}${circStr} holders=${holderCount ?? 'N/A'} transfers=${transferCount ?? 'N/A'}`);
+
+      await ds.sleep(200);
+    } catch (err) {
+      log(`  Stablecoin enrichment failed for ${token.symbol}: ${err.message}`, 'WARN');
+    }
+  }
+}
+
 // --- Address Resolution for Unresolved Projects ---
 
 async function resolveNewAddresses() {
-  const unresolved = db.getDeploymentsWithoutAddress();
+  const unresolved = await db.getDeploymentsWithoutAddress();
   log(`Attempting address resolution for ${unresolved.length} projects...`);
 
   let resolved = 0;
@@ -239,7 +367,7 @@ async function resolveNewAddresses() {
     try {
       const result = await ds.resolveContractAddress(project);
       if (result && result.address) {
-        db.updateDeployment(project.id, { contract_address: result.address });
+        await db.updateDeployment(project.id, { contract_address: result.address });
         log(`  Resolved @${project.project} → ${result.address} (${result.method}, confidence: ${result.confidence})`);
         resolved++;
       }
@@ -250,6 +378,20 @@ async function resolveNewAddresses() {
   }
 
   log(`  Resolved ${resolved}/${unresolved.length} addresses`);
+}
+
+// --- Heatmap Revalidation ---
+
+async function notifyHeatmap() {
+  const url = process.env.HEATMAP_URL;
+  const secret = process.env.REVALIDATE_SECRET;
+  if (!url || !secret) return;
+  try {
+    await fetch(`${url}/api/revalidate?secret=${secret}`, { method: 'POST' });
+    log('Notified heatmap to revalidate');
+  } catch (err) {
+    log(`Heatmap revalidation failed (non-fatal): ${err.message}`, 'WARN');
+  }
 }
 
 // --- Main ---
@@ -266,6 +408,12 @@ async function main() {
   }
 
   try {
+    await syncMegaMafiaFlags();
+  } catch (err) {
+    log(`MegaMafia sync failed: ${err.message}`, 'ERROR');
+  }
+
+  try {
     await enrichProjects();
   } catch (err) {
     log(`Project enrichment failed: ${err.message}`, 'ERROR');
@@ -277,13 +425,21 @@ async function main() {
     log(`Address resolution failed: ${err.message}`, 'ERROR');
   }
 
+  try {
+    await enrichStablecoins();
+  } catch (err) {
+    log(`Stablecoin enrichment failed: ${err.message}`, 'ERROR');
+  }
+
   const elapsed = ((Date.now() - start) / 1000).toFixed(1);
   log(`=== Enrichment complete in ${elapsed}s ===`);
-  db.close();
+
+  await notifyHeatmap();
+  await db.close();
 }
 
-main().catch(err => {
+main().catch(async err => {
   log(`Fatal enrichment error: ${err.message}`, 'FATAL');
-  db.close();
+  await db.close();
   process.exit(1);
 });

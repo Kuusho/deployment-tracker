@@ -21,28 +21,17 @@ function getTwitterClient() {
 }
 
 async function main() {
-  // Recent deployments from SQLite
-  const recent = db.getRecentDeployments(24);
+  // Recent deployments from DB
+  const recent = await db.getRecentDeployments(24);
 
   // Ecosystem metrics
-  const eco = db.getLatestEcosystemMetrics();
+  const eco = await db.getLatestEcosystemMetrics();
 
   // Recent milestones (last 24h)
-  const allMilestones = db.getDb().prepare(`
-    SELECT * FROM milestones WHERE created_at >= datetime('now', '-24 hours') ORDER BY created_at DESC
-  `).all();
+  const allMilestones = await db.getRecentMilestones(24);
 
   // Top scored projects
-  const topProjects = db.getDb().prepare(`
-    SELECT d.project, d.category, pm.score, pm.classification, pm.tvl_usd, pm.tx_count
-    FROM project_metrics pm
-    JOIN deployments d ON d.id = pm.deployment_id
-    WHERE pm.id IN (
-      SELECT MAX(id) FROM project_metrics GROUP BY deployment_id
-    )
-    ORDER BY pm.score DESC
-    LIMIT 5
-  `).all();
+  const topProjects = await db.getTopScoredProjects(5);
 
   console.log(`Found ${recent.length} recent deployments, ${allMilestones.length} milestones`);
 
@@ -97,7 +86,7 @@ async function main() {
 
   if (process.argv.includes('--dry-run')) {
     console.log('Dry run - not posting.');
-    db.close();
+    await db.close();
     return;
   }
 
@@ -109,10 +98,10 @@ async function main() {
     console.error('Failed to post recap:', error.message);
   }
 
-  db.close();
+  await db.close();
 }
 
-main().catch(err => {
+main().catch(async err => {
   console.error(err);
-  db.close();
+  await db.close();
 });

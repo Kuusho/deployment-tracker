@@ -152,7 +152,7 @@ async function handleContractDeployment(tx, block) {
   }
 
   // Cross-reference against known projects
-  const knownProjects = db.getAllDeployments();
+  const knownProjects = await db.getAllDeployments();
   let matchedProject = null;
 
   if (contractAddress) {
@@ -182,14 +182,14 @@ async function handleContractDeployment(tx, block) {
 
 // --- Graceful Shutdown ---
 
-function shutdown() {
+async function shutdown() {
   log('Shutting down...');
   cleanup();
   if (ws) {
     ws.close();
     ws = null;
   }
-  db.close();
+  await db.close();
   process.exit(0);
 }
 

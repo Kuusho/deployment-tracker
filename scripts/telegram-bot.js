@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Bunny Intel - Telegram Bot with Slash Commands
- * 
+ *
  * Commands:
  *   /start    - Welcome + intro to Bunny Intel
  *   /status   - Live MegaETH ecosystem health snapshot
@@ -13,7 +13,7 @@
  *   /intel    - Latest enrichment run summary
  *   /brief    - AI-generated alpha brief (/brief or /brief [project])
  *   /help     - Command list
- * 
+ *
  * Premium (via x402 — coming soon):
  *   /realtime - Live deployment feed subscription
  *   /custom   - Custom alert filters
@@ -24,6 +24,7 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const TelegramBot = require('node-telegram-bot-api');
 const db = require('../lib/db');
+const { sql, ensureInit } = db;
 const narrator = require('../lib/narrator');
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -35,7 +36,6 @@ if (!TOKEN) {
 }
 
 const bot = new TelegramBot(TOKEN, { polling: true });
-const conn = db.getDb();
 
 function log(msg) {
   console.log(`[${new Date().toISOString()}] ${msg}`);
@@ -50,65 +50,82 @@ function formatTVL(n) {
   return `$${n.toFixed(2)}`;
 }
 
+function formatSupply(n) {
+  if (n == null) return 'N/A';
+  if (n >= 1e9) return `${(n/1e9).toFixed(2)}B`;
+  if (n >= 1e6) return `${(n/1e6).toFixed(2)}M`;
+  if (n >= 1e3) return `${(n/1e3).toFixed(1)}K`;
+  return n.toFixed(2);
+}
+
+function kpiBar(current, target, width = 10) {
+  const pct = Math.min(current / target, 1);
+  const filled = Math.round(pct * width);
+  const bar = '█'.repeat(filled) + '░'.repeat(width - filled);
+  return `${bar} ${(pct * 100).toFixed(1)}%`;
+}
+
 function classificationEmoji(c) {
   const map = { ALPHA: '🚀', ROUTINE: '🟢', WARNING: '⚠️', RISK: '🔴' };
   return map[c] || '⬜';
 }
 
-function getEcosystemStats() {
-  const eco = conn.prepare(`
-    SELECT * FROM ecosystem_metrics ORDER BY snapshot_at DESC LIMIT 1
-  `).get();
-  return eco;
+async function getEcosystemStats() {
+  const rows = await sql`
+    SELECT * FROM tracker_ecosystem_metrics ORDER BY snapshot_at DESC LIMIT 1
+  `;
+  return rows[0] ?? null;
 }
 
-function getTopProjects(limit = 10) {
-  return conn.prepare(`
-    SELECT d.project, d.category, 
-           pm.score, pm.classification, pm.tvl_usd, pm.tx_count,
+async function getTopProjects(limit = 10) {
+  return sql`
+    SELECT d.project, d.category, d.megamafia,
+           pm.score, pm.classification, pm.tvl_usd, pm.tx_count, pm.usdm_balance,
            pm.snapshot_at
-    FROM deployments d
-    LEFT JOIN project_metrics pm ON pm.deployment_id = d.id
-    WHERE pm.id IN (SELECT MAX(id) FROM project_metrics GROUP BY deployment_id)
+    FROM tracker_deployments d
+    LEFT JOIN tracker_project_metrics pm ON pm.deployment_id = d.id
+    WHERE pm.id IN (SELECT MAX(id) FROM tracker_project_metrics GROUP BY deployment_id)
     ORDER BY pm.score DESC NULLS LAST, pm.tvl_usd DESC NULLS LAST
-    LIMIT ?
-  `).all(limit);
+    LIMIT ${limit}
+  `;
 }
 
-function getWarnings() {
-  return conn.prepare(`
+async function getWarnings() {
+  return sql`
     SELECT d.project, d.category,
            pm.score, pm.classification, pm.tvl_usd,
            pm.snapshot_at
-    FROM deployments d
-    LEFT JOIN project_metrics pm ON pm.deployment_id = d.id
-    WHERE pm.id IN (SELECT MAX(id) FROM project_metrics GROUP BY deployment_id)
+    FROM tracker_deployments d
+    LEFT JOIN tracker_project_metrics pm ON pm.deployment_id = d.id
+    WHERE pm.id IN (SELECT MAX(id) FROM tracker_project_metrics GROUP BY deployment_id)
       AND pm.classification IN ('WARNING', 'RISK')
     ORDER BY pm.score ASC NULLS LAST
     LIMIT 20
-  `).all();
+  `;
 }
 
-function getRecentMilestones(limit = 5) {
-  return conn.prepare(`
-    SELECT * FROM milestones
+async function getRecentMilestonesBot(limit = 5) {
+  return sql`
+    SELECT * FROM tracker_milestones
     ORDER BY created_at DESC
-    LIMIT ?
-  `).all(limit);
+    LIMIT ${limit}
+  `;
 }
 
-function getProjectBySlug(query) {
+async function getProjectBySlug(query) {
   const q = query.toLowerCase().replace('@', '');
-  return conn.prepare(`
+  const rows = await sql`
     SELECT d.*, pm.score, pm.classification, pm.tvl_usd, pm.tx_count, pm.is_verified,
-           ar.address as resolved_address
-    FROM deployments d
-    LEFT JOIN project_metrics pm ON pm.deployment_id = d.id
-    LEFT JOIN address_resolutions ar ON ar.deployment_id = d.id AND ar.success = 1
-    WHERE LOWER(d.project) LIKE ? OR LOWER(d.defillama_slug) LIKE ?
+           pm.usdm_balance, pm.usdm_balance_delta,
+           ar.result_address as resolved_address
+    FROM tracker_deployments d
+    LEFT JOIN tracker_project_metrics pm ON pm.deployment_id = d.id
+    LEFT JOIN tracker_address_resolutions ar ON ar.deployment_id = d.id AND ar.success = 1
+    WHERE LOWER(d.project) LIKE ${'%' + q + '%'} OR LOWER(d.defillama_slug) LIKE ${'%' + q + '%'}
     ORDER BY pm.snapshot_at DESC
     LIMIT 1
-  `).get(`%${q}%`, `%${q}%`);
+  `;
+  return rows[0] ?? null;
 }
 
 // ─── Command Handlers ───────────────────────────────────────────────────────
@@ -119,13 +136,14 @@ async function cmdStart(msg) {
 
 gm ${name}.
 
-i'm pan. i track the megaeth ecosystem in real-time — contracts, TVL, deployments, behavioral signals.
+i'm pan. i track the megaeth ecosystem in real-time — contracts, TVL, USDM flows, MegaMafia deployments, throughput signals.
 
 the data powering @korewapandesu's posts lives here.
 
 *what i can do:*
 /status — ecosystem health snapshot
-/tvl — protocol TVL breakdown  
+/tvl — protocol TVL breakdown
+/stables — USDM + CUSD supply, circulation, staking
 /top — highest signal projects
 /warnings — risk alerts
 /alpha — alpha signals
@@ -144,6 +162,7 @@ async function cmdHelp(msg) {
 *Data:*
 /status — ecosystem snapshot
 /tvl — TVL by protocol
+/stables — USDM + CUSD supply & circulation
 /top — top projects by score
 /warnings — WARNING + RISK alerts
 /alpha — alpha-tier signals
@@ -163,14 +182,14 @@ _premium tier (x402) coming soon_`;
 }
 
 async function cmdStatus(msg) {
-  const eco = getEcosystemStats();
+  const eco = await getEcosystemStats();
 
   let text = `📊 *MegaETH Ecosystem — Live Snapshot*\n\n`;
 
   if (eco) {
-    const ts = new Date(eco.snapshot_at).toLocaleString('en-US', { 
-      month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', 
-      timeZone: 'UTC' 
+    const ts = new Date(eco.snapshot_at).toLocaleString('en-US', {
+      month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+      timeZone: 'UTC'
     });
     text += `🕐 \`${ts} UTC\`\n\n`;
     if (eco.total_tvl) text += `💰 *TVL:* ${formatTVL(eco.total_tvl)}\n`;
@@ -182,12 +201,12 @@ async function cmdStatus(msg) {
   }
 
   // Count projects by classification
-  const counts = conn.prepare(`
+  const counts = await sql`
     SELECT pm.classification, COUNT(*) as cnt
-    FROM project_metrics pm
-    WHERE pm.id IN (SELECT MAX(id) FROM project_metrics GROUP BY deployment_id)
+    FROM tracker_project_metrics pm
+    WHERE pm.id IN (SELECT MAX(id) FROM tracker_project_metrics GROUP BY deployment_id)
     GROUP BY pm.classification
-  `).all();
+  `;
 
   if (counts.length > 0) {
     text += `\n*Signal breakdown:*\n`;
@@ -196,21 +215,67 @@ async function cmdStatus(msg) {
     }
   }
 
-  text += `\n_tracking ${conn.prepare('SELECT COUNT(*) as c FROM deployments').get().c} projects_`;
+  const totalRows = await sql`SELECT COUNT(*) as c FROM tracker_deployments`;
+  text += `\n_tracking ${totalRows[0].c} projects_`;
+
+  // TGE KPI progress
+  const usdm = await db.getLatestStablecoinMetrics('USDM');
+  const cusd = await db.getLatestStablecoinMetrics('CUSD');
+  const scusd = await db.getLatestStablecoinMetrics('stcUSD');
+
+  text += `\n\n*TGE KPIs — Road to Token:*\n`;
+
+  // KPI 1: Mafia apps — count known mafia handles present in our DB
+  const MAFIA_HANDLES = ['capmoney_', 'kumbaya_xyz', 'Showdown_TCG', 'avon_xyz', 'PrismFi_', 'ubitelmobile'];
+  const mafiaRows = await sql`
+    SELECT COUNT(*) as c FROM tracker_deployments WHERE project = ANY(${MAFIA_HANDLES})
+  `;
+  const mafiaCount = parseInt(mafiaRows[0].c);
+  text += `\n📱 *KPI 1 — Mafia Apps:*\n`;
+  text += `  \`${mafiaCount}/10\` ${kpiBar(mafiaCount, 10)}\n`;
+
+  // KPI 2: USDM $500M
+  text += `\n💵 *KPI 2 — USDM $500M:*\n`;
+  if (usdm?.total_supply != null) {
+    const USDM_TARGET = 500_000_000;
+    const APPS_TARGET = 125_000_000; // 25% of 500M
+    text += `  Supply: \`${formatSupply(usdm.total_supply)}\` / 500M\n`;
+    text += `  ${kpiBar(usdm.total_supply, USDM_TARGET)}\n`;
+    if (usdm.apps_deposited_usdm != null) {
+      const appsDepPct = usdm.total_supply > 0
+        ? ((usdm.apps_deposited_usdm / usdm.total_supply) * 100).toFixed(1)
+        : '0';
+      text += `  In tracked apps: \`${formatSupply(usdm.apps_deposited_usdm)}\` (${appsDepPct}% of supply)\n`;
+      text += `  vs 125M sub-target: ${kpiBar(usdm.apps_deposited_usdm, APPS_TARGET)}\n`;
+    }
+  } else {
+    text += `  _no USDM data — run enrichment_\n`;
+  }
+
+  // KPI 3: Daily fees — not tracked
+  text += `\n💸 *KPI 3 — Daily Fees ($50K × 30 days):*\n`;
+  text += `  _not tracked — check megaeth.com/token_\n`;
+
+  // CUSD + stcUSD summary
+  if (cusd?.total_supply != null || scusd?.total_supply != null) {
+    text += `\n💵 *Other stablecoins:*\n`;
+    if (cusd?.circulating_supply != null) text += `  $CUSD circ: \`${formatSupply(cusd.circulating_supply)}\` (${cusd.holder_count?.toLocaleString() ?? 'N/A'} holders)\n`;
+    if (scusd?.total_supply != null) text += `  $stcUSD: \`${formatSupply(scusd.total_supply)}\` staked (${scusd.holder_count?.toLocaleString() ?? 'N/A'} holders)\n`;
+  }
 
   await bot.sendMessage(msg.chat.id, text, { parse_mode: 'Markdown' });
 }
 
 async function cmdTVL(msg) {
-  const projects = conn.prepare(`
+  const projects = await sql`
     SELECT d.project, d.category, pm.tvl_usd, pm.classification, pm.score
-    FROM deployments d
-    JOIN project_metrics pm ON pm.deployment_id = d.id
-    WHERE pm.id IN (SELECT MAX(id) FROM project_metrics GROUP BY deployment_id)
+    FROM tracker_deployments d
+    JOIN tracker_project_metrics pm ON pm.deployment_id = d.id
+    WHERE pm.id IN (SELECT MAX(id) FROM tracker_project_metrics GROUP BY deployment_id)
       AND pm.tvl_usd > 0
     ORDER BY pm.tvl_usd DESC
     LIMIT 15
-  `).all();
+  `;
 
   if (projects.length === 0) {
     await bot.sendMessage(msg.chat.id, '⬜ no TVL data yet');
@@ -229,7 +294,7 @@ async function cmdTVL(msg) {
 }
 
 async function cmdTop(msg) {
-  const projects = getTopProjects(10);
+  const projects = await getTopProjects(10);
   const scored = projects.filter(p => p.score !== null);
 
   if (scored.length === 0) {
@@ -239,17 +304,20 @@ async function cmdTop(msg) {
 
   let text = `🏆 *Top Projects by Signal Score*\n\n`;
   for (const p of scored) {
-    text += `${classificationEmoji(p.classification)} *${p.score}* \`@${p.project}\``;
+    const mafia = p.megamafia ? ' ★' : '';
+    text += `${classificationEmoji(p.classification)} *${p.score}* \`@${p.project}\`${mafia}`;
     if (p.tvl_usd) text += ` — ${formatTVL(p.tvl_usd)}`;
+    if (p.usdm_balance >= 1000) text += ` 💵${formatSupply(p.usdm_balance)}`;
     text += `\n`;
   }
 
-  text += `\n_score: 0-100 | ALPHA >70 | ROUTINE 40-70 | WARNING 20-40 | RISK <20_`;
+  text += `\n_score: 0-100 | ALPHA ≥75 | ROUTINE 40-74 | WARNING 20-39 | RISK <20_`;
+  text += `\n_signals: TVL · tx activity · USDM held · throughput burst · fees · ★ MegaMafia_`;
   await bot.sendMessage(msg.chat.id, text, { parse_mode: 'Markdown' });
 }
 
 async function cmdWarnings(msg) {
-  const warnings = getWarnings();
+  const warnings = await getWarnings();
 
   if (warnings.length === 0) {
     await bot.sendMessage(msg.chat.id, '✅ no warnings or risks detected');
@@ -264,31 +332,34 @@ async function cmdWarnings(msg) {
     text += `\n`;
   }
 
-  text += `\n_low scores = unverified contracts, no TVL, no tx data_\n_not financial advice — always verify_`;
+  text += `\n_low scores = no tx activity, no USDM, no throughput burst — not financial advice_`;
   await bot.sendMessage(msg.chat.id, text, { parse_mode: 'Markdown' });
 }
 
 async function cmdAlpha(msg) {
-  // Alpha = score > 70 OR massive TVL change
-  const alphaProjects = conn.prepare(`
-    SELECT d.project, d.category, pm.score, pm.tvl_usd, pm.classification
-    FROM deployments d
-    JOIN project_metrics pm ON pm.deployment_id = d.id
-    WHERE pm.id IN (SELECT MAX(id) FROM project_metrics GROUP BY deployment_id)
-      AND (pm.classification = 'ALPHA' OR pm.score >= 65)
+  // High signal: ALPHA classification OR approaching (≥70) OR significant USDM held (≥10K)
+  const alphaProjects = await sql`
+    SELECT d.project, d.category, d.megamafia, pm.score, pm.tvl_usd, pm.classification,
+           pm.usdm_balance, pm.tx_count
+    FROM tracker_deployments d
+    JOIN tracker_project_metrics pm ON pm.deployment_id = d.id
+    WHERE pm.id IN (SELECT MAX(id) FROM tracker_project_metrics GROUP BY deployment_id)
+      AND (pm.classification = 'ALPHA' OR pm.score >= 70 OR pm.usdm_balance >= 10000)
     ORDER BY pm.score DESC
     LIMIT 10
-  `).all();
+  `;
 
-  const milestones = getRecentMilestones(5);
+  const milestones = await getRecentMilestonesBot(5);
 
   let text = `🚀 *Alpha Signals*\n\n`;
 
   if (alphaProjects.length > 0) {
     text += `*High Signal Projects:*\n`;
     for (const p of alphaProjects) {
-      text += `🚀 \`@${p.project}\` score=${p.score}`;
+      const mafia = p.megamafia ? ' ★' : '';
+      text += `🚀 \`@${p.project}\`${mafia} score=${p.score}`;
       if (p.tvl_usd) text += ` ${formatTVL(p.tvl_usd)}`;
+      if (p.usdm_balance >= 1000) text += ` 💵${formatSupply(p.usdm_balance)}`;
       text += `\n`;
     }
     text += `\n`;
@@ -311,7 +382,7 @@ async function cmdAlpha(msg) {
 }
 
 async function cmdIntel(msg) {
-  const latestMetrics = conn.prepare(`
+  const latestMetrics = await sql`
     SELECT COUNT(*) as total,
            SUM(CASE WHEN classification='ALPHA' THEN 1 ELSE 0 END) as alpha,
            SUM(CASE WHEN classification='ROUTINE' THEN 1 ELSE 0 END) as routine,
@@ -319,38 +390,51 @@ async function cmdIntel(msg) {
            SUM(CASE WHEN classification='RISK' THEN 1 ELSE 0 END) as risk,
            MAX(snapshot_at) as last_run,
            SUM(tvl_usd) as total_tvl
-    FROM project_metrics pm
-    WHERE pm.id IN (SELECT MAX(id) FROM project_metrics GROUP BY deployment_id)
-  `).get();
+    FROM tracker_project_metrics pm
+    WHERE pm.id IN (SELECT MAX(id) FROM tracker_project_metrics GROUP BY deployment_id)
+  `;
 
-  const milestonesCount = conn.prepare('SELECT COUNT(*) as c FROM milestones').get();
-  const resolvedCount = conn.prepare(`
-    SELECT COUNT(DISTINCT project) as c FROM deployments WHERE contract_address IS NOT NULL
-  `).get();
+  const milestonesCount = await sql`SELECT COUNT(*) as c FROM tracker_milestones`;
+  const resolvedCount = await sql`
+    SELECT COUNT(DISTINCT project) as c FROM tracker_deployments WHERE contract_address IS NOT NULL
+  `;
 
   let text = `🧠 *Bunny Intel — Enrichment Summary*\n\n`;
-  
-  const lastRun = conn.prepare('SELECT MAX(snapshot_at) as last FROM project_metrics').get();
-  if (lastRun?.last) {
-    text += `🕐 Last run: \`${lastRun.last}\`\n\n`;
+
+  const lastRun = await sql`SELECT MAX(snapshot_at) as last FROM tracker_project_metrics`;
+  if (lastRun[0]?.last) {
+    text += `🕐 Last run: \`${lastRun[0].last}\`\n\n`;
   }
 
+  const mafiaFlaggedRows = await sql`SELECT COUNT(*) as c FROM tracker_deployments WHERE megamafia = 1`;
+  const usdmTotal = await sql`
+    SELECT SUM(usdm_balance) as total FROM tracker_project_metrics
+    WHERE id IN (SELECT MAX(id) FROM tracker_project_metrics GROUP BY deployment_id)
+      AND usdm_balance IS NOT NULL
+  `;
+
+  const m = latestMetrics[0];
   text += `*Coverage:*\n`;
-  text += `📦 Projects tracked: ${latestMetrics.total}\n`;
-  text += `🔗 Addresses resolved: ${resolvedCount.c}\n`;
-  text += `⚡ Milestones detected: ${milestonesCount.c}\n\n`;
+  text += `📦 Projects tracked: ${m.total}\n`;
+  text += `🔗 Addresses resolved: ${resolvedCount[0].c}\n`;
+  text += `★ MegaMafia flagged: ${mafiaFlaggedRows[0].c}\n`;
+  text += `⚡ Milestones detected: ${milestonesCount[0].c}\n\n`;
 
   text += `*Signal Distribution:*\n`;
-  if (latestMetrics.alpha > 0) text += `🚀 ALPHA: ${latestMetrics.alpha}\n`;
-  text += `🟢 ROUTINE: ${latestMetrics.routine || 0}\n`;
-  text += `⚠️ WARNING: ${latestMetrics.warning || 0}\n`;
-  text += `🔴 RISK: ${latestMetrics.risk || 0}\n\n`;
+  if (m.alpha > 0) text += `🚀 ALPHA: ${m.alpha}\n`;
+  text += `🟢 ROUTINE: ${m.routine || 0}\n`;
+  text += `⚠️ WARNING: ${m.warning || 0}\n`;
+  text += `🔴 RISK: ${m.risk || 0}\n\n`;
 
-  if (latestMetrics.total_tvl) {
-    text += `💰 Total TVL tracked: ${formatTVL(latestMetrics.total_tvl)}\n`;
+  if (m.total_tvl) {
+    text += `💰 Total TVL tracked: ${formatTVL(m.total_tvl)}\n`;
+  }
+  if (usdmTotal[0]?.total) {
+    text += `💵 USDM in tracked contracts: ${formatSupply(usdmTotal[0].total)}\n`;
   }
 
-  text += `\n_data powered by Alchemy, Blockscout, DeFiLlama, miniblocks.io_`;
+  text += `\n_signals: TVL · tx activity · USDM held · throughput burst · fee proxy · MegaMafia_`;
+  text += `\n_sources: Alchemy RPC, Blockscout, DeFiLlama_`;
   await bot.sendMessage(msg.chat.id, text, { parse_mode: 'Markdown' });
 }
 
@@ -361,14 +445,15 @@ async function cmdProject(msg, args) {
   }
 
   const query = args.join(' ');
-  const project = getProjectBySlug(query);
+  const project = await getProjectBySlug(query);
 
   if (!project) {
     await bot.sendMessage(msg.chat.id, `❌ project not found: \`${query}\`\n\nTry /top to see tracked projects`, { parse_mode: 'Markdown' });
     return;
   }
 
-  let text = `📋 *@${project.project}*\n`;
+  const mafiaTag = project.megamafia ? ' ★ MegaMafia' : '';
+  let text = `📋 *@${project.project}*${mafiaTag}\n`;
   text += `_${project.category || 'unknown'}_\n\n`;
 
   if (project.score !== null) {
@@ -377,8 +462,13 @@ async function cmdProject(msg, args) {
 
   if (project.tvl_usd) text += `💰 TVL: ${formatTVL(project.tvl_usd)}\n`;
   if (project.tx_count) text += `⚡ Tx count: ${project.tx_count.toLocaleString()}\n`;
+  if (project.usdm_balance != null) {
+    text += `💵 USDM held: \`${formatSupply(project.usdm_balance)}\``;
+    if (project.usdm_balance_delta > 0) text += ` _(+${formatSupply(project.usdm_balance_delta)} last run)_`;
+    text += `\n`;
+  }
 
-  const addr = project.contract_address || project.result_address;
+  const addr = project.contract_address || project.resolved_address;
   if (addr) {
     text += `\n🔗 Contract: \`${addr}\`\n`;
     text += `📊 [Blockscout](https://megaeth.blockscout.com/address/${addr})\n`;
@@ -432,49 +522,106 @@ async function cmdBrief(msg, args) {
   }
 }
 
+async function cmdStables(msg) {
+  const stables = await db.getAllLatestStablecoinMetrics();
+
+  if (stables.length === 0) {
+    await bot.sendMessage(msg.chat.id, '⬜ no stablecoin data yet — run enrichment first');
+    return;
+  }
+
+  let text = `💵 *MegaETH Stablecoin Monitor*\n\n`;
+
+  for (const s of stables) {
+    const ts = new Date(s.snapshot_at).toLocaleString('en-US', {
+      month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+      timeZone: 'UTC'
+    });
+
+    text += `*$${s.token_symbol}*\n`;
+    if (s.total_supply != null) text += `  📦 Total supply: \`${formatSupply(s.total_supply)}\`\n`;
+    if (s.staked_supply != null) text += `  🔒 Staked (in stcUSD): \`${formatSupply(s.staked_supply)}\`\n`;
+    if (s.circulating_supply != null && s.token_symbol === 'CUSD') {
+      text += `  🔄 Circulating: \`${formatSupply(s.circulating_supply)}\`\n`;
+    }
+    if (s.holder_count != null) text += `  👤 Holders: ${Number(s.holder_count).toLocaleString()}\n`;
+    if (s.transfer_count != null) {
+      text += `  ⚡ Transfers: ${Number(s.transfer_count).toLocaleString()}`;
+      if (s.transfer_count_delta != null && s.transfer_count_delta > 0) {
+        text += ` _(+${s.transfer_count_delta.toLocaleString()} last 30m)_`;
+      }
+      text += `\n`;
+    }
+    text += `  🕐 \`${ts} UTC\`\n\n`;
+  }
+
+  text += `_contracts verified on [Blockscout](https://megaeth.blockscout.com)_`;
+  await bot.sendMessage(msg.chat.id, text, { parse_mode: 'Markdown' });
+}
+
 // ─── Command Registry ────────────────────────────────────────────────────────
 
-bot.onText(/\/start/, (msg) => cmdStart(msg).catch(e => log(`start error: ${e.message}`)));
-bot.onText(/\/help/, (msg) => cmdHelp(msg).catch(e => log(`help error: ${e.message}`)));
-bot.onText(/\/status/, (msg) => cmdStatus(msg).catch(e => log(`status error: ${e.message}`)));
-bot.onText(/\/tvl/, (msg) => cmdTVL(msg).catch(e => log(`tvl error: ${e.message}`)));
-bot.onText(/\/top/, (msg) => cmdTop(msg).catch(e => log(`top error: ${e.message}`)));
-bot.onText(/\/warnings/, (msg) => cmdWarnings(msg).catch(e => log(`warnings error: ${e.message}`)));
-bot.onText(/\/alpha/, (msg) => cmdAlpha(msg).catch(e => log(`alpha error: ${e.message}`)));
-bot.onText(/\/intel/, (msg) => cmdIntel(msg).catch(e => log(`intel error: ${e.message}`)));
-bot.onText(/\/project(?:\s+(.+))?/, (msg, match) => {
+bot.onText(/\/start(?:@\w+)?/, (msg) => cmdStart(msg).catch(e => log(`start error: ${e.message}`)));
+bot.onText(/\/help(?:@\w+)?/, (msg) => cmdHelp(msg).catch(e => log(`help error: ${e.message}`)));
+bot.onText(/\/status(?:@\w+)?/, (msg) => cmdStatus(msg).catch(e => log(`status error: ${e.message}`)));
+bot.onText(/\/tvl(?:@\w+)?/, (msg) => cmdTVL(msg).catch(e => log(`tvl error: ${e.message}`)));
+bot.onText(/\/top(?:@\w+)?/, (msg) => cmdTop(msg).catch(e => log(`top error: ${e.message}`)));
+bot.onText(/\/warnings(?:@\w+)?/, (msg) => cmdWarnings(msg).catch(e => log(`warnings error: ${e.message}`)));
+bot.onText(/\/alpha(?:@\w+)?/, (msg) => cmdAlpha(msg).catch(e => log(`alpha error: ${e.message}`)));
+bot.onText(/\/intel(?:@\w+)?/, (msg) => cmdIntel(msg).catch(e => log(`intel error: ${e.message}`)));
+bot.onText(/\/project(?:@\w+)?(?:\s+(.+))?/, (msg, match) => {
   const args = match[1] ? match[1].trim().split(/\s+/) : [];
   cmdProject(msg, args).catch(e => log(`project error: ${e.message}`));
 });
-bot.onText(/\/brief(?:\s+(.+))?/, (msg, match) => {
+bot.onText(/\/brief(?:@\w+)?(?:\s+(.+))?/, (msg, match) => {
   const args = match[1] ? match[1].trim().split(/\s+/) : [];
   cmdBrief(msg, args).catch(e => log(`brief error: ${e.message}`));
 });
+bot.onText(/\/stables(?:@\w+)?/, (msg) => cmdStables(msg).catch(e => log(`stables error: ${e.message}`)));
 
 // Register commands with Telegram BotFather API
 async function registerCommands() {
+  const commands = [
+    { command: 'start', description: 'Welcome to Bunny Intel' },
+    { command: 'status', description: 'Live ecosystem health snapshot' },
+    { command: 'tvl', description: 'TVL breakdown by protocol' },
+    { command: 'top', description: 'Top projects by signal score' },
+    { command: 'warnings', description: 'WARNING and RISK alerts' },
+    { command: 'alpha', description: 'Latest alpha signals' },
+    { command: 'intel', description: 'Enrichment run summary' },
+    { command: 'project', description: 'Deep dive on a project (/project kumbaya)' },
+    { command: 'brief', description: 'AI alpha brief (/brief or /brief sectorone)' },
+    { command: 'stables', description: 'USDM + CUSD supply, circulation, staking' },
+    { command: 'help', description: 'All commands' },
+  ];
+
+  const scopes = [
+    { type: 'default' },
+    { type: 'all_group_chats' },
+    { type: 'all_chat_administrators' },
+  ];
+
   try {
-    await bot.setMyCommands([
-      { command: 'start', description: 'Welcome to Bunny Intel' },
-      { command: 'status', description: 'Live ecosystem health snapshot' },
-      { command: 'tvl', description: 'TVL breakdown by protocol' },
-      { command: 'top', description: 'Top projects by signal score' },
-      { command: 'warnings', description: 'WARNING and RISK alerts' },
-      { command: 'alpha', description: 'Latest alpha signals' },
-      { command: 'intel', description: 'Enrichment run summary' },
-      { command: 'project', description: 'Deep dive on a project (/project kumbaya)' },
-      { command: 'brief', description: 'AI alpha brief (/brief or /brief sectorone)' },
-      { command: 'help', description: 'All commands' },
-    ]);
-    log('✅ Commands registered with Telegram');
+    for (const scope of scopes) {
+      await bot.setMyCommands(commands, { scope });
+    }
+    log('✅ Commands registered with Telegram (private + groups)');
   } catch (e) {
     log(`⚠️ Command registration failed: ${e.message}`);
   }
 }
 
 // Startup
-log('🐰 Bunny Intel Telegram Bot starting...');
-registerCommands();
+async function start() {
+  await ensureInit();
+  log('🐰 Bunny Intel Telegram Bot starting...');
+  await registerCommands();
+}
+
+start().catch(err => {
+  log(`Startup failed: ${err.message}`);
+  process.exit(1);
+});
 
 bot.on('polling_error', (err) => {
   log(`Polling error: ${err.message}`, 'ERROR');

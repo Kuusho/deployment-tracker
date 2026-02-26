@@ -170,5 +170,47 @@ beefyfinance, _canolic, currentxdex, GMX_IO, intraVerse_Game, LayerZero_Core, Ma
 - **Wallet funding:** 0.005 ETH from human (gas float)
 - **All new dependencies:** $0 (open source)
 
+## V3.1: AI Narration Layer (2026-02-15)
+
+### Decisions
+
+| Date | Decision | Rationale | Rejection |
+| :--- | :--- | :--- | :--- |
+| 2026-02-15 | `/brief` slash command with Claude narration | Raw data doesn't ship as a product — narrative intelligence does. AI transforms scored metrics into shareable alpha briefs. | Manual copywriting (doesn't scale), no narration (leaves value on the table). |
+| 2026-02-15 | Inline narrator (lib/narrator.js) | Frontend-agnostic module: Telegram calls it free, x402 API will call it paid. Same function, two audiences. | Direct in bot handler (not reusable), separate microservice (overkill). |
+| 2026-02-15 | Claude Sonnet 4.5 via Anthropic SDK | Best quality/speed/cost ratio for 1500-char briefs. ~2-4s generation time. | GPT-4o (no existing relationship), local model (quality gap), Haiku (too terse for narrative). |
+| 2026-02-15 | Telegram bot = free, x402 API = paid | Humans in Telegram get free distribution (acquisition funnel). Agents/apps pay via x402 HTTP 402 flow (monetization layer). Per-command micropayments in Telegram is terrible UX — x402 is designed for machine-to-machine. | Paywalling Telegram commands (UX dead end), Telegram Stars (premature). |
+| 2026-02-15 | Node 25 upgrade | `node:sqlite` built-in requires Node 22+. v25 is current stable. Eliminates native addon compilation issues with better-sqlite3. | Staying on Node 20 (would require rewriting db.js to use better-sqlite3 directly). |
+
+### Build Results (2026-02-15)
+
+**New files:**
+- `lib/narrator.js` — Data gathering + prompt construction + Claude API call. Two functions: `generateEcosystemBrief()` and `generateProjectBrief(query)`. Pan's voice baked into system prompt.
+
+**Modified files:**
+- `scripts/telegram-bot.js` — Added `/brief` and `/brief [project]` commands with typing indicator, error handling, BotFather registration. Now 10 slash commands.
+- `.env` — Added `ANTHROPIC_API_KEY`
+- `package.json` — Added `@anthropic-ai/sdk` dependency
+
+**New dependencies:** `@anthropic-ai/sdk`
+
+### Architecture: Two Frontends, One Brain
+
+```
+Telegram (free, humans)          API Server (paid, machines)
+┌─────────────────────┐         ┌──────────────────────────┐
+│ /brief              │         │ GET /api/brief           │
+│ /brief sectorone    │         │ GET /api/brief/:project  │
+│                     │         │                          │
+│  narrator.js ◀──────┼────────▶│  narrator.js             │
+│  (inline call)      │         │  (x402 payment gate)     │
+└─────────────────────┘         └──────────────────────────┘
+```
+
+### Cost Tracker (V3.1)
+- **Anthropic API:** ~$0.003/brief (Sonnet 4.5, ~1K input + 500 output tokens)
+- **@anthropic-ai/sdk:** $0 (MIT)
+- **Estimated monthly at 100 briefs/day:** ~$9
+
 ## Countdown
 **32 days remaining** in the 40-day mission.

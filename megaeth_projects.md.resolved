@@ -1,0 +1,42 @@
+# MegaETH Project Directory
+
+_A combined listing of MegaETH projects utilizing both initial research and provided data, now including official website links where available._
+
+| Handle / Slug | Project Name | Category | Description | Website / Link |
+|---|---|---|---|---|
+| **PriorityTrade_** | PriorityTrade | trading | A fast Telegram trading bot designed for MegaETH, integrating with DEX aggregators to route trades. _(Note: Corrected from Grok's hallucinated "Priority Tradelines LLC")_ | No dedicated site found; primarily X-based. |
+| **BasedTradingBot** | Based / BasedBot | trading | #1 Degen Trading Bot for executing trades across multiple chains, often used for sniping launches and trading memecoins. | https://t.me/based_eth_bot |
+| **GainsNetwork_io** | Gains Network | DeFi | A decentralized leverage trading platform allowing users to trade crypto, forex, and commodities with up to 1000x leverage. | https://gains.trade |
+| **birdeye_so** | Birdeye | infra | All-in-one trading data tool: real-time price charts, smart money flows, undiscovered gems, rich historical data across 300+ exchanges. | https://birdeye.so |
+| **AvailProject** | Avail | infra | Creating a Unified Onchain Economy. Scaling access to users, apps, chains, and liquidity. | https://www.availproject.org |
+| **BungeeExchange** | Bungee | bridge | A liquidity marketplace powered by Socket Protocol that lets you trade any token on any chain. | https://www.bungee.exchange |
+| **aori_io** | aori | bridge | Infrastructure for High-Frequency Intent Execution on any chain. | https://aori.io |
+| **AiCrypts** | CryptsAI | gaming | Prompt your way through dungeons. Win ETH. Prompt-based RPG to compete for a prize. | X: @AiCrypts |
+| **bananagun** | Banana Gun | trading | The best trading bot, built by on-chain traders. | https://www.bananagun.io |
+| **chainlink** | Chainlink | oracle | The market-leading oracle platform bringing the global financial system onchain. Data + Interop + Compliance + Privacy + Orchestration. | https://chain.link |
+| **infinex** | Infinex | infra | A new kind of crypto superapp. Unified portfolio, serious Opsec, built-in multi-provider trading. | https://infinex.xyz |
+| **aave** | Aave | DeFi | The most trusted financial network. Earn, borrow, save, and swap. | https://aave.com |
+| **telisxyz** | Telis | bridge | A one-way gas bridge used to transfer ETH from Base to MegaETH. Uses math to handle crosschain swaps via hedged perp positions on WCM. | https://telis.xyz |
+| **LidoFinance** | Lido | DeFi | Ethereum staking and DeFi liquid staking. | https://lido.fi |
+| **redstone_defi** | RedStone | oracle | The data bedrock of the new financial system. Modular, cross-chain blockchain oracle supporting 1,000+ assets for DeFi & institutions. | https://redstone.finance |
+| **capmoney_** | cap | DeFi | Stablecoin protocol with credible financial guarantees, built on Ethereum. First Type III stablecoin. | https://cap.money |
+| **OffshoreOnMega** | OFFSHORE PROTOCOL | DeFi | Build an international money laundering empire simulation on MegaETH. Categorized as a GambolFi project within the MegaETH ecosystem. | X-based |
+| **realtime_defi** | Realtime DeFi | DeFi | A "DeFi superapp" on MegaETH designed to offer vertically integrated services: CLOB + AMM hybrid, launchpad, perps, aggregator. | No dedicated site found. |
+| **clutchpredict** | Clutch Predict | Prediction | AI-powered sports prediction tool integrating prediction markets into livestreams. | No site found. |
+| **mrdn_finance** | Meridian | DeFi | Infrastructure for AI agent nano-services. x402 payment rails for the agent economy on Base and MegaETH. | X: @mrdn_finance |
+| **hitdotone** | Hit | DeFi | Arcade Finance gamified DeFi: Up to 1000x leverage on real markets within the MegaETH ecosystem. | https://hit.one |
+| **fasterdotfun** | Faster | Launchpad | Fair Launch accelerated by badbunnz_. Create and trade memecoins instantly. | https://faster.fun |
+| **mtrkr_xyz** | MTRKR (Mega Tracker) | infra | Visualize your MegaETH wallet in real time. Track on-chain activity, DeFi positions, NFTs, and gaming activity. | https://mtrkr.xyz |
+| **premarket_xyz** | Premarket | DeFi | Trading platform built on MegaETH specialized in premarket options for upcoming TGEs, IPOs, and everything else. Built by stryke. | https://premarket.xyz |
+| **SupernovaLabs_** | Supernova Labs | DeFi | Native rate exchange on MegaETH allowing users to trade yields, hedge interest rates, crypto cross-rates, and FX. Team behind Streamer. | X-based |
+| **avon_xyz** | Avon | DeFi | The first real-time credit layer. First lending CLOB (Central Limit Order Book). | https://avon.xyz |
+| **warpexchange** | WarpX | DeFi | High-performance AMM / DEX built for the MegaETH real-time blockchain delivering ultra-fast swaps and efficient liquidity. | https://warpexchange.xyz |
+| **SectorOneDEX** | SectorOne | DeFi | Native DLMM DEX launching on MegaETH. The most efficient liquidity layer for traders & LPs. | X: @SectorOneDEX |
+| **PrismFi_** | Prism FI | DeFi | Your Spectrum of Financial Intelligence. ProjectX/Jupiter-style aggregation leveraging Uniswap V3's concentrated liquidity model. | https://prism.fi |
+| **TopStrikeIO** | TopStrike | gaming | Real-time, one-tap football player trading game powered by MegaETH where every moment on the pitch moves the market. | https://topstrike.io |
+| **thewarren_app** | Warren | infra | Decentralized Content Management System built entirely on the MegaETH network. | https://thewarren.app |
+| **wcm_inc** | World Markets | DeFi | Integrates leveraged finance into MegaETH: the marketplace for spot, perps, and lending (all CLOBs, all cross-margined). Run carry and basis trades with universal margin. | https://wcm.inc |
+| **kumbaya_xyz** | Kumbaya | DeFi | A DEX focused on liquidity and trading on the MegaETH blockchain. Cult formation venue / Culture-value flywheel. | https://kumbaya.xyz |
+| **AveForge** | Ave Forge | gaming | The crypto arena where mechs clash and players earn through risk. On-chain, competitive player-versus-player (PvP) mech battler game. | X-based |
+| **smasherdotfun** | Smasher | gaming | Smash your way to a 100x. Gaming project natively built for MegaETH. | https://smasher.fun |
+| **stompdotgg** | stomp.gg | gaming | Super techy onchain monster PvP. | https://stomp.gg |

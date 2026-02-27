@@ -19,55 +19,71 @@ const { getProject } = require('../lib/projects');
 
 const JSON_FILE = path.join(__dirname, '../memory/deployments-tracked.json');
 
+// Categories match bunny-intel/src/data/catalogue.ts taxonomy exactly
 const CATEGORY_KEYWORDS = {
-  defi:       ['defi', 'swap', 'liquidity', 'yield', 'lending', 'borrow', 'amm', 'pool', 'vault', 'stablecoin', 'perps', 'perpetual', 'clob', 'exchange', 'dex', 'clmm'],
-  oracle:     ['oracle', 'data feeds', 'data streams', 'price feed'],
-  bridge:     ['bridge', 'cross-chain', 'bridging', 'swap across'],
-  infra:      ['infrastructure', 'hosting', 'data availability', 'wallet tracker', 'rpc', 'indexer', 'analytics'],
-  trading:    ['trading bot', 'trading terminal', 'degen trading', 'sniper', 'bot'],
-  launchpad:  ['launchpad', 'launch', 'tge', 'token deploy', 'memecoin'],
-  gaming:     ['game', 'gaming', 'arena', 'pvp', 'fantasy football', 'play', 'tournament', 'monster'],
-  prediction: ['prediction market', 'bet on', 'betting'],
-  social:     ['social', 'community'],
+  defi:           ['stablecoin', 'yield', 'vault', 'liquid staking'],
+  dex:            ['amm', 'swap', 'liquidity pool', 'clmm', 'dlmm'],
+  lending:        ['lending', 'borrow', 'credit', 'clob'],
+  aggregator:     ['aggregator', 'routing'],
+  perps:          ['perps', 'perpetual', 'leverage', 'margin', 'clob'],
+  options:        ['options', 'premarket'],
+  launchpad:      ['launchpad', 'launch', 'tge', 'token deploy', 'memecoin'],
+  prediction:     ['prediction market', 'bet on', 'betting'],
+  games:          ['game', 'gaming', 'arena', 'pvp', 'fantasy football', 'play', 'tournament', 'monster'],
+  infrastructure: ['infrastructure', 'bridge', 'oracle', 'rpc', 'indexer', 'analytics', 'trading bot', 'wallet tracker'],
+  social:         ['social', 'community'],
+  ai:             ['ai agent', 'autonomous agent'],
+  depin:          ['depin', 'decentralized physical'],
 };
 
 const CATEGORY_OVERRIDES = {
-  aave:            'defi',
+  // Lending
+  aave:            'lending',
+  avon_xyz:        'lending',
+  // DeFi
   LidoFinance:     'defi',
-  chainlink:       'oracle',
-  redstone_defi:   'oracle',
-  GainsNetwork_io: 'defi',
   capmoney_:       'defi',
-  avon_xyz:        'defi',
-  warpexchange:    'defi',
-  wcm_inc:         'defi',
-  SectorOneDEX:    'defi',
-  realtime_defi:   'defi',
   SupernovaLabs_:  'defi',
-  PrismFi_:        'defi',
-  kumbaya_xyz:     'defi',
-  mrdn_finance:    'defi',
-  premarket_xyz:   'defi',
-  BungeeExchange:  'bridge',
-  aori_io:         'bridge',
-  telisxyz:        'bridge',
-  AvailProject:    'infra',
-  birdeye_so:      'infra',
-  mtrkr_xyz:       'infra',
-  thewarren_app:   'infra',
-  infinex:         'infra',
-  PriorityTrade_:  'trading',
-  BasedTradingBot: 'trading',
-  bananagun:       'trading',
+  // DEX
+  warpexchange:    'dex',
+  SectorOneDEX:    'dex',
+  kumbaya_xyz:     'dex',
+  // Aggregator
+  PrismFi_:        'aggregator',
+  // Perps
+  GainsNetwork_io: 'perps',
+  wcm_inc:         'perps',
+  realtime_defi:   'perps',
+  hitdotone:       'perps',
+  // Options
+  premarket_xyz:   'options',
+  // Launchpad
   fasterdotfun:    'launchpad',
-  AveForge:        'gaming',
-  TopStrikeIO:     'gaming',
-  stompdotgg:      'gaming',
+  // Prediction
   clutchpredict:   'prediction',
-  hitdotone:       'defi',
-  smasherdotfun:   'gaming',
-  AiCrypts:        'gaming',
-  OffshoreOnMega:  'defi',
+  // Games
+  AveForge:        'games',
+  TopStrikeIO:     'games',
+  stompdotgg:      'games',
+  smasherdotfun:   'games',
+  AiCrypts:        'games',
+  OffshoreOnMega:  'games',
+  // Infrastructure (oracles, bridges, bots, tools)
+  chainlink:       'infrastructure',
+  redstone_defi:   'infrastructure',
+  BungeeExchange:  'infrastructure',
+  aori_io:         'infrastructure',
+  telisxyz:        'infrastructure',
+  AvailProject:    'infrastructure',
+  birdeye_so:      'infrastructure',
+  mtrkr_xyz:       'infrastructure',
+  thewarren_app:   'infrastructure',
+  infinex:         'infrastructure',
+  PriorityTrade_:  'infrastructure',
+  BasedTradingBot: 'infrastructure',
+  bananagun:       'infrastructure',
+  // AI
+  mrdn_finance:    'ai',
 };
 
 const DEFILLAMA_SLUGS = {

@@ -119,8 +119,10 @@ async function syncMegaMafiaFlags() {
 // --- Per-Project Enrichment ---
 
 async function enrichProjects() {
-  const projects = await db.getDeploymentsWithAddress();
-  log(`Enriching ${projects.length} projects with contract addresses...`);
+  const projects = await db.getDeploymentsForEnrichment();
+  const withAddr = projects.filter(p => p.contract_address).length;
+  const slugOnly = projects.length - withAddr;
+  log(`Enriching ${projects.length} projects (${withAddr} with address, ${slugOnly} DeFiLlama-slug-only)...`);
 
   // Get ecosystem TVL for scoring
   const latestEco = await db.getLatestEcosystemMetrics();
@@ -154,40 +156,45 @@ async function enrichSingleProject(project, ecosystemTvl, protocols) {
   let tvlUsd = null;
   let usdmBalance = null;
 
-  // Blockscout address info
-  try {
-    const addrInfo = await ds.blockscoutGetAddress(addr);
-    txCount = parseInt(addrInfo.transactions_count) || null;
-    if (addrInfo.coin_balance) {
-      balanceWei = addrInfo.coin_balance;
-      balanceEth = parseFloat(addrInfo.coin_balance) / 1e18;
+  // Blockscout address info — requires contract address
+  if (addr) {
+    try {
+      const addrInfo = await ds.blockscoutGetAddress(addr);
+      txCount = parseInt(addrInfo.transactions_count) || null;
+      if (addrInfo.coin_balance) {
+        balanceWei = addrInfo.coin_balance;
+        balanceEth = parseFloat(addrInfo.coin_balance) / 1e18;
+      }
+    } catch (err) {
+      log(`    Blockscout address failed for @${project.project}: ${err.message}`, 'WARN');
     }
-  } catch (err) {
-    log(`    Blockscout address failed for @${project.project}: ${err.message}`, 'WARN');
   }
 
-  // DeFiLlama TVL
+  // DeFiLlama TVL — uses slug or fuzzy name match, no address needed
   tvlUsd = ds.getProtocolTvlForProject(protocols, project.project, project.defillama_slug);
 
-  // USDM balance held in this contract — key MegaETH KPI signal
-  // vault-mechanic projects (e.g. AVON) may have USDM locked even when not on DeFiLlama
-  try {
-    usdmBalance = await ds.rpcERC20BalanceOf(USDM_ADDRESS, addr, 18);
-    if (usdmBalance === 0) usdmBalance = null; // treat zero as absent for scoring
-  } catch (err) {
-    // silent — most contracts won't hold USDM
+  // USDM balance held in this contract — requires contract address
+  if (addr) {
+    try {
+      usdmBalance = await ds.rpcERC20BalanceOf(USDM_ADDRESS, addr, 18);
+      if (usdmBalance === 0) usdmBalance = null; // treat zero as absent for scoring
+    } catch (err) {
+      // silent — most contracts won't hold USDM
+    }
   }
 
-  // Contract verification
-  try {
-    const contract = await ds.blockscoutGetContract(addr);
-    isVerified = contract && contract.is_verified ? 1 : 0;
-    if (isVerified !== project.contract_verified) {
-      await db.updateDeployment(project.id, { contract_verified: isVerified });
+  // Contract verification — requires contract address
+  if (addr) {
+    try {
+      const contract = await ds.blockscoutGetContract(addr);
+      isVerified = contract && contract.is_verified ? 1 : 0;
+      if (isVerified !== project.contract_verified) {
+        await db.updateDeployment(project.id, { contract_verified: isVerified });
+      }
+    } catch (err) {
+      // 404 = not verified, not an error
+      isVerified = 0;
     }
-  } catch (err) {
-    // 404 = not verified, not an error
-    isVerified = 0;
   }
 
   // Compute deltas from previous snapshot
